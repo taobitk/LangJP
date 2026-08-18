@@ -12,6 +12,8 @@
     selectedRows: new Set(),  // Set of selected row ids (e.g. 'a', 'ka', 'sa'...)
     currentTab: 'fill-romaji', // 'study', 'fill-romaji', 'fill-hiragana'
     evalMode: 'zen',          // 'zen' (instant check) or 'test' (check on submit)
+    isShuffled: false,        // Shuffled random order mode
+    shuffledItems: null,      // Cached shuffled items
     userAnswers: {},          // key: `${rowId}_${colIndex}` -> value: string
     activeSlotKey: null,      // For Mode 3: currently selected slot
     isSubmitted: false,       // In test mode, whether answers have been checked
@@ -250,8 +252,39 @@
   }
 
   function bindActionButtons() {
+    // Shuffle Board Button
+    const btnShuffleBoard = document.getElementById('btn-toggle-shuffle');
+    const shuffleBtnText = document.getElementById('shuffle-btn-text');
+
+    if (btnShuffleBoard) {
+      btnShuffleBoard.addEventListener('click', () => {
+        state.isShuffled = !state.isShuffled;
+        state.shuffledItems = null; // Tạo thứ tự xáo trộn mới
+        
+        if (state.isShuffled) {
+          btnShuffleBoard.className = 'text-[11px] sm:text-xs font-bold px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-indigo-600 text-white border border-indigo-600 shadow-md shadow-indigo-600/30 flex items-center gap-1.5 transition-all';
+          if (shuffleBtnText) shuffleBtnText.textContent = 'Đang trộn ngẫu nhiên 🎲';
+        } else {
+          btnShuffleBoard.className = 'text-[11px] sm:text-xs font-semibold px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:bg-slate-50 text-slate-700 dark:text-slate-200 flex items-center gap-1.5 shadow-sm transition-all';
+          if (shuffleBtnText) shuffleBtnText.textContent = 'Trộn ngẫu nhiên';
+        }
+
+        resetBoardState();
+        if (state.evalMode === 'test' && state.currentTab !== 'study') {
+          startTimer();
+        }
+        renderMatrix();
+        if (state.currentTab === 'fill-hiragana') renderPalette();
+        updateStats();
+        lucide.createIcons();
+      });
+    }
+
     document.getElementById('btn-reset-board').addEventListener('click', () => {
       resetBoardState();
+      if (state.isShuffled) {
+        state.shuffledItems = null; // Xáo trộn mới khi bấm làm lại
+      }
       if (state.evalMode === 'test' && state.currentTab !== 'study') {
         startTimer();
       }
@@ -280,6 +313,9 @@
       document.getElementById('results-modal').classList.add('hidden');
       document.getElementById('results-modal').classList.remove('flex');
       resetBoardState();
+      if (state.isShuffled) {
+        state.shuffledItems = null; // Xáo trộn mới cho ván mới
+      }
       if (state.evalMode === 'test' && state.currentTab !== 'study') {
         startTimer();
       }
@@ -359,6 +395,7 @@
   }
 
   function refreshAll() {
+    state.shuffledItems = null;
     renderFilterCategories();
     renderMatrix();
     if (state.currentTab === 'fill-hiragana') {
@@ -373,6 +410,93 @@
     const container = document.getElementById('matrix-board-container');
     container.innerHTML = '';
 
+    const validItems = getAllValidItems();
+
+    // --- CHẾ ĐỘ TRỘN NGẪU NHIÊN (SHUFFLE MODE) ---
+    if (state.isShuffled) {
+      if (!state.shuffledItems || state.shuffledItems.length !== validItems.length) {
+        state.shuffledItems = [...validItems].sort(() => Math.random() - 0.5);
+      }
+
+      const groupSection = document.createElement('section');
+      groupSection.className = 'space-y-3 animate-fade-in';
+
+      // Section Header
+      const header = document.createElement('div');
+      header.className = 'flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-1.5';
+      header.innerHTML = `
+        <div class="flex items-center gap-2">
+          <div class="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse"></div>
+          <h3 class="font-bold text-sm text-slate-800 dark:text-slate-200">Ma Trận Xáo Trộn Ngẫu Nhiên (${state.shuffledItems.length} chữ)</h3>
+        </div>
+        <span class="text-[11px] text-indigo-500 font-semibold font-mono hidden sm:inline">Random Shuffled Mode</span>
+      `;
+      groupSection.appendChild(header);
+
+      // Chunk shuffled items into rows of 5
+      const rowsList = document.createElement('div');
+      rowsList.className = 'space-y-2.5';
+
+      const chunkSize = 5;
+      for (let i = 0; i < state.shuffledItems.length; i += chunkSize) {
+        const chunk = state.shuffledItems.slice(i, i + chunkSize);
+        const rowIdx = Math.floor(i / chunkSize);
+
+        const rowEl = document.createElement('div');
+        rowEl.className = 'bg-white dark:bg-slate-900/90 rounded-2xl p-2 sm:p-4 shadow-sm border border-slate-200/80 dark:border-slate-800 flex flex-row items-center gap-2 sm:gap-4';
+
+        const labelCol = document.createElement('div');
+        labelCol.className = 'w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 text-[10px] sm:text-xs font-mono font-bold flex items-center justify-center shrink-0 border border-indigo-200 dark:border-indigo-800';
+        labelCol.textContent = `#${rowIdx + 1}`;
+        labelCol.title = `Hàng ngẫu nhiên số ${rowIdx + 1}`;
+        rowEl.appendChild(labelCol);
+
+        const cellsGrid = document.createElement('div');
+        cellsGrid.className = `grid gap-1.5 sm:gap-3 flex-1 w-full`;
+        cellsGrid.style.display = 'grid';
+        cellsGrid.style.gridTemplateColumns = `repeat(5, minmax(0, 1fr))`;
+
+        chunk.forEach(item => {
+          const cellKey = item.key;
+          let cellEl;
+          if (state.currentTab === 'study') {
+            cellEl = createStudyCell(item);
+          } else if (state.currentTab === 'fill-romaji') {
+            cellEl = createRomajiFillCell(item, cellKey);
+          } else {
+            cellEl = createHiraganaFillCell(item, cellKey);
+          }
+          cellsGrid.appendChild(cellEl);
+        });
+
+        // Fill remaining spaces in the last row if < 5 items
+        if (chunk.length < 5) {
+          for (let fill = 0; fill < 5 - chunk.length; fill++) {
+            const emptyCell = document.createElement('div');
+            emptyCell.className = 'h-16 sm:h-24 rounded-xl border border-dashed border-slate-200 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/40 flex items-center justify-center opacity-30';
+            emptyCell.innerHTML = '<span class="text-xs text-slate-400 font-mono">-</span>';
+            cellsGrid.appendChild(emptyCell);
+          }
+        }
+
+        rowEl.appendChild(cellsGrid);
+        rowsList.appendChild(rowEl);
+      }
+
+      groupSection.appendChild(rowsList);
+      container.appendChild(groupSection);
+
+      if (state.currentTab === 'fill-hiragana' && !state.activeSlotKey) {
+        const firstItem = state.shuffledItems.find(i => !state.userAnswers[i.key]);
+        if (firstItem) {
+          state.activeSlotKey = firstItem.key;
+          highlightActiveSlot();
+        }
+      }
+      return;
+    }
+
+    // --- CHẾ ĐỘ THƯỜNG (THEO NHÓM BẢNG CHỮ CÁI) ---
     const selectedRows = getSelectedRowsData();
 
     // Group rows by category
