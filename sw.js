@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hiragana-matrix-v1';
+const CACHE_NAME = 'hiragana-matrix-v2';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -10,12 +10,13 @@ const ASSETS_TO_CACHE = [
   'https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Zen+Maru+Gothic:wght@500;700;900&display=swap'
 ];
 
-// Install Event - Pre-cache core assets
+// Install Event - Pre-cache core assets & activate immediately
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS_TO_CACHE);
-    }).then(() => self.skipWaiting())
+    })
   );
 });
 
@@ -34,15 +35,20 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch Event - Stale-While-Revalidate / Cache-First strategy
+// Fetch Event
 self.addEventListener('fetch', (event) => {
   // Only handle GET requests
   if (event.request.method !== 'GET') return;
 
+  // KHÔNG can thiệp vào audio stream để tránh lỗi CORS trên Service Worker
+  if (event.request.url.includes('translate.google.com') || event.request.destination === 'audio') {
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
-        // Return cached response immediately, fetch update in background
+        // Return cached response, fetch update in background
         fetch(event.request)
           .then((networkResponse) => {
             if (networkResponse && networkResponse.status === 200) {
@@ -66,7 +72,6 @@ self.addEventListener('fetch', (event) => {
 
         return networkResponse;
       }).catch(() => {
-        // Fallback if completely offline
         if (event.request.headers.get('accept')?.includes('text/html')) {
           return caches.match('./index.html');
         }
