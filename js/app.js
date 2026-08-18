@@ -60,7 +60,9 @@
     });
   }
 
-  // --- AUDIO / TTS (WEB SPEECH API) ---
+  // --- AUDIO ENGINE (HTML5 Audio + Web Speech API Fallback) ---
+  let currentAudio = null;
+
   function initSound() {
     const savedSound = localStorage.getItem('hiragana_sound');
     state.soundEnabled = savedSound !== 'false';
@@ -91,29 +93,40 @@
   }
 
   function speakKana(text) {
-    if (!state.soundEnabled || !('speechSynthesis' in window) || !text) return;
-    
-    // Đánh thức engine âm thanh nếu Safari/iOS đưa vào trạng thái ngủ đông (paused)
-    if (window.speechSynthesis.paused) {
-      window.speechSynthesis.resume();
-    }
+    if (!state.soundEnabled || !text) return;
 
-    window.speechSynthesis.cancel(); // Hủy âm thanh đang phát dở
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'ja-JP';
-    utterance.rate = 0.85; // Tốc độ chuẩn rõ ràng cho người học
-    utterance.pitch = 1.0;
-
-    // Tìm giọng tiếng Nhật có sẵn trong trình duyệt (Kyoko/Otoya trên Safari, Google trên Chrome)
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length > 0) {
-      const jpVoice = voices.find(v => v.lang && (v.lang.includes('ja') || v.lang.includes('JP')));
-      if (jpVoice) {
-        utterance.voice = jpVoice;
+    // Cách 1: HTML5 Audio CDN (Chạy được trên mọi thiết bị iOS Safari kể cả khi iPhone đang gạt rung / chế độ im lặng)
+    try {
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
       }
+      const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=ja&client=tw-ob`;
+      currentAudio = new Audio(audioUrl);
+      currentAudio.playbackRate = 0.9;
+      const playPromise = currentAudio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          // Fallback sang Web Speech API nếu bị chặn mạng
+          fallbackSpeechSynthesis(text);
+        });
+      }
+    } catch (e) {
+      fallbackSpeechSynthesis(text);
     }
+  }
 
-    window.speechSynthesis.speak(utterance);
+  function fallbackSpeechSynthesis(text) {
+    if (!('speechSynthesis' in window)) return;
+    try {
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'ja-JP';
+      utterance.rate = 0.85;
+      window.speechSynthesis.speak(utterance);
+    } catch (err) {}
   }
 
   // --- FILTER UI ---
