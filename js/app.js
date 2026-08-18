@@ -15,6 +15,7 @@
     isShuffled: false,        // Shuffled random order mode
     shuffledItems: null,      // Cached shuffled items
     revealedHints: new Set(), // Set of cellKeys currently revealing answer
+    soundEnabled: true,       // Audio pronunciation enabled
     userAnswers: {},          // key: `${rowId}_${colIndex}` -> value: string
     activeSlotKey: null,      // For Mode 3: currently selected slot
     isSubmitted: false,       // In test mode, whether answers have been checked
@@ -30,6 +31,7 @@
     HIRAGANA_DATA.basic.rows.forEach(r => state.selectedRows.add(r.id));
 
     initTheme();
+    initSound();
     renderFilterCategories();
     bindHeaderEvents();
     bindModeTabs();
@@ -56,6 +58,55 @@
       localStorage.setItem('hiragana_theme', isDark ? 'dark' : 'light');
       lucide.createIcons();
     });
+  }
+
+  // --- AUDIO / TTS (WEB SPEECH API) ---
+  function initSound() {
+    const savedSound = localStorage.getItem('hiragana_sound');
+    state.soundEnabled = savedSound !== 'false';
+    updateSoundUI();
+
+    const btnSound = document.getElementById('btn-sound-toggle');
+    if (btnSound) {
+      btnSound.addEventListener('click', () => {
+        state.soundEnabled = !state.soundEnabled;
+        localStorage.setItem('hiragana_sound', state.soundEnabled ? 'true' : 'false');
+        updateSoundUI();
+      });
+    }
+  }
+
+  function updateSoundUI() {
+    const iconOn = document.getElementById('sound-icon-on');
+    const iconOff = document.getElementById('sound-icon-off');
+    if (iconOn && iconOff) {
+      if (state.soundEnabled) {
+        iconOn.classList.remove('hidden');
+        iconOff.classList.add('hidden');
+      } else {
+        iconOn.classList.add('hidden');
+        iconOff.classList.remove('hidden');
+      }
+    }
+  }
+
+  function speakKana(text) {
+    if (!state.soundEnabled || !('speechSynthesis' in window) || !text) return;
+    
+    window.speechSynthesis.cancel(); // Hủy âm thanh đang phát dở
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ja-JP';
+    utterance.rate = 0.85; // Tốc độ chuẩn rõ ràng cho người học
+    utterance.pitch = 1.0;
+
+    // Tìm giọng tiếng Nhật có sẵn trong trình duyệt nếu có
+    const voices = window.speechSynthesis.getVoices();
+    const jpVoice = voices.find(v => v.lang.includes('ja') || v.lang.includes('JP'));
+    if (jpVoice) {
+      utterance.voice = jpVoice;
+    }
+
+    window.speechSynthesis.speak(utterance);
   }
 
   // --- FILTER UI ---
@@ -615,15 +666,21 @@
   // 1. Mode: Study Card
   function createStudyCell(item) {
     const card = document.createElement('div');
-    card.className = 'h-16 sm:h-24 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 hover:border-sakura-400 dark:hover:border-sakura-500 hover:shadow-md transition-all flex flex-col items-center justify-center gap-0.5 sm:gap-1 group cursor-pointer';
+    card.className = 'h-16 sm:h-24 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 hover:border-sakura-400 dark:hover:border-sakura-500 hover:shadow-md transition-all flex flex-col items-center justify-center gap-0.5 sm:gap-1 group cursor-pointer relative';
+    card.title = `Bấm để nghe phát âm "${item.kana}" (${item.romaji})`;
     card.innerHTML = `
       <span class="font-jp font-bold text-lg sm:text-3xl text-slate-800 dark:text-slate-100 group-hover:scale-110 transition-transform">${item.kana}</span>
       <span class="font-mono text-[10px] sm:text-xs font-semibold text-sakura-600 dark:text-sakura-400 bg-sakura-50 dark:bg-sakura-950/60 px-1.5 sm:px-2 py-0.2 sm:py-0.5 rounded-md border border-sakura-100 dark:border-sakura-900">${item.romaji}</span>
     `;
+
+    card.addEventListener('click', () => {
+      speakKana(item.kana);
+    });
+
     return card;
   }
 
-  // 2. Mode: Hiragana to Romaji Fill (Nhìn chữ Nhật ➔ Tự gõ Romaji, Click để Xem/Ẩn đáp án)
+  // 2. Mode: Hiragana to Romaji Fill (Nhìn chữ Nhật ➔ Tự gõ Romaji, Click để Xem/Ẩn đáp án & Phát âm)
   function createRomajiFillCell(item, cellKey) {
     const card = document.createElement('div');
     const userAnswer = (state.userAnswers[cellKey] || '').toLowerCase().trim();
@@ -650,10 +707,10 @@
 
     card.className = `h-16 sm:h-24 rounded-xl border ${borderClass} ${bgClass} transition-all flex flex-col items-center justify-between p-1 sm:p-2 group focus-within:ring-2 focus-within:ring-sakura-500 focus-within:border-sakura-500 relative`;
 
-    // Top Area: Hiragana character with click-to-reveal hint toggle
+    // Top Area: Hiragana character with click-to-reveal hint toggle & pronunciation
     const topArea = document.createElement('div');
     topArea.className = 'w-full flex items-center justify-center gap-1 cursor-pointer select-none hover:scale-105 transition-transform';
-    topArea.title = isHintRevealed ? 'Bấm để ẩn đáp án' : 'Bấm để xem đáp án';
+    topArea.title = isHintRevealed ? 'Bấm để ẩn đáp án' : 'Bấm để xem đáp án & nghe phát âm';
 
     const kanaSpan = document.createElement('span');
     kanaSpan.className = 'font-jp font-bold text-base sm:text-2xl text-slate-800 dark:text-slate-100 leading-none';
@@ -667,14 +724,16 @@
       topArea.appendChild(hintTag);
     }
 
-    // Toggle hint on click (Cập nhật DOM cục bộ trên ô này, KHÔNG reload cả bảng)
+    // Toggle hint on click (Cập nhật DOM cục bộ trên ô này & phát âm tiếng Nhật)
     topArea.addEventListener('click', (e) => {
       e.stopPropagation();
+      speakKana(item.kana); // Phát âm chuẩn tiếng Nhật
+
       const isRevealed = state.revealedHints.has(cellKey);
       if (isRevealed) {
         state.revealedHints.delete(cellKey);
         card.classList.remove('border-amber-400', 'ring-2', 'ring-amber-400/20', 'bg-amber-50/30', 'dark:bg-amber-950/10');
-        topArea.title = 'Bấm để xem đáp án';
+        topArea.title = 'Bấm để xem đáp án & nghe phát âm';
         const existingHint = topArea.querySelector('.hint-tag');
         if (existingHint) existingHint.remove();
       } else {
@@ -703,7 +762,7 @@
     input.spellcheck = false;
     input.className = 'w-full text-center font-mono font-bold text-xs sm:text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md sm:rounded-lg py-0.5 sm:py-1 px-0.5 text-slate-900 dark:text-white focus:outline-none focus:border-sakura-500';
 
-    // Event: Input typing with smart Auto-Advance
+    // Event: Input typing with smart Auto-Advance & sound reinforcement
     input.addEventListener('input', (e) => {
       const val = e.target.value.toLowerCase().trim();
       state.userAnswers[cellKey] = val;
@@ -718,6 +777,7 @@
       if (state.evalMode === 'zen') {
         if (nowCorrect) {
           card.className = `h-16 sm:h-24 rounded-xl border border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/40 dark:bg-emerald-950/20 transition-all flex flex-col items-center justify-between p-1 sm:p-2 animate-pop relative`;
+          speakKana(item.kana); // Đọc phát âm khi gõ đúng!
           focusNextInput(cellKey);
         } else {
           card.className = `h-16 sm:h-24 rounded-xl border ${val.length > 0 ? 'border-rose-400 ring-2 ring-rose-400/20 bg-rose-50/40 dark:bg-rose-950/20' : 'border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/40'} transition-all flex flex-col items-center justify-between p-1 sm:p-2 relative`;
@@ -748,7 +808,7 @@
     return card;
   }
 
-  // 3. Mode: Romaji to Hiragana Fill (Nhìn Romaji ➔ Chọn/Điền Chữ Nhật, Click để Xem/Ẩn đáp án)
+  // 3. Mode: Romaji to Hiragana Fill (Nhìn Romaji ➔ Chọn/Điền Chữ Nhật, Click để Xem/Ẩn đáp án & Phát âm)
   function createHiraganaFillCell(item, cellKey) {
     const card = document.createElement('div');
     const placedKana = state.userAnswers[cellKey];
@@ -778,28 +838,29 @@
     card.className = `h-16 sm:h-24 rounded-xl border ${borderClass} ${bgClass} transition-all flex flex-col items-center justify-between p-1 sm:p-2 cursor-pointer hover:border-indigo-400 relative group`;
     card.dataset.slotKey = cellKey;
 
-    // Romaji Hint Tag at Top (Clickable to reveal/hide answer in place)
+    // Romaji Hint Tag at Top (Clickable to reveal/hide answer in place & play pronunciation)
     const romajiTag = document.createElement('button');
-    romajiTag.className = `font-mono text-[9px] sm:text-[11px] font-bold px-1.5 sm:px-2 py-0.2 sm:py-0.5 rounded transition-all flex items-center gap-1 ${
-      isHintRevealed
-        ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700'
-        : 'bg-slate-100 dark:bg-slate-700/80 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
-    }`;
-    romajiTag.title = isHintRevealed ? 'Bấm để ẩn đáp án' : 'Bấm để xem đáp án';
+    romajiTag.className = `font-mono text-[9px] sm:text-[11px] font-bold px-1.5 sm:px-2 py-0.2 sm:py-0.5 rounded transition-all flex items-center gap-1 ${isHintRevealed
+      ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700'
+      : 'bg-slate-100 dark:bg-slate-700/80 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
+      }`;
+    romajiTag.title = isHintRevealed ? 'Bấm để ẩn đáp án' : 'Bấm để xem đáp án & nghe phát âm';
     romajiTag.innerHTML = `
       <span>${item.romaji}</span>
       ${isHintRevealed ? `<span class="hint-tag font-jp text-[11px] text-amber-600 dark:text-amber-400 font-black animate-pop">💡${item.kana}</span>` : ''}
     `;
 
-    // Toggle hint in-place (Cập nhật DOM cục bộ trên thẻ này)
+    // Toggle hint in-place & play audio
     romajiTag.addEventListener('click', (e) => {
       e.stopPropagation();
+      speakKana(item.kana); // Phát âm chuẩn tiếng Nhật
+
       const isRevealed = state.revealedHints.has(cellKey);
       if (isRevealed) {
         state.revealedHints.delete(cellKey);
         card.classList.remove('border-amber-400', 'ring-2', 'ring-amber-400/20', 'bg-amber-50/30', 'dark:bg-amber-950/10');
         romajiTag.className = 'font-mono text-[9px] sm:text-[11px] font-bold px-1.5 sm:px-2 py-0.2 sm:py-0.5 rounded transition-all flex items-center gap-1 bg-slate-100 dark:bg-slate-700/80 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600';
-        romajiTag.title = 'Bấm để xem đáp án';
+        romajiTag.title = 'Bấm để xem đáp án & nghe phát âm';
         const existingHint = romajiTag.querySelector('.hint-tag');
         if (existingHint) existingHint.remove();
       } else {
@@ -852,8 +913,11 @@
       card.appendChild(slotBody);
     }
 
-    // Click card to make it active slot
+    // Click card to make it active slot & play sound
     card.addEventListener('click', () => {
+      if (placedKana) {
+        speakKana(placedKana);
+      }
       state.activeSlotKey = cellKey;
       highlightActiveSlot();
     });
@@ -926,6 +990,9 @@
 
   function placeKanaIntoSlot(kana) {
     const validItems = getAllValidItems();
+
+    // Phát âm chữ cái khi chọn từ khay
+    speakKana(kana);
 
     // If activeSlotKey is invalid or already filled, find next empty slot
     let targetKey = state.activeSlotKey;

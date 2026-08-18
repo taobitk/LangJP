@@ -12,7 +12,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Hiragana">
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='128' fill='%23f43f68'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='280' fill='white'%3Eあ%3C/text%3E%3C/svg%3E">
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='128' fill='%23f43f68'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='280' fill='white'%3Eあ%3C/text%3E%3C/svg%3E">
 
   <!-- Google Fonts: Noto Sans JP & Zen Maru Gothic & Plus Jakarta Sans -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -157,6 +158,14 @@
           </button>
         </div>
 
+        <!-- Sound Mute/Unmute Toggle -->
+        <button id="btn-sound-toggle"
+          class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
+          title="Bật / Tắt âm thanh phát âm">
+          <i data-lucide="volume-2" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500" id="sound-icon-on"></i>
+          <i data-lucide="volume-x" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 hidden" id="sound-icon-off"></i>
+        </button>
+
         <!-- Dark mode toggle -->
         <button id="btn-theme-toggle"
           class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0">
@@ -284,7 +293,9 @@
       <!-- Action Buttons -->
       <div class="flex items-center gap-1.5 shrink-0">
         <!-- Shuffle Board Button -->
-        <button id="btn-toggle-shuffle" class="text-[11px] sm:text-xs font-semibold px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:bg-slate-50 text-slate-700 dark:text-slate-200 flex items-center gap-1.5 shadow-sm transition-all" title="Xáo trộn toàn bộ thứ tự chữ cái trên bảng">
+        <button id="btn-toggle-shuffle"
+          class="text-[11px] sm:text-xs font-semibold px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:bg-slate-50 text-slate-700 dark:text-slate-200 flex items-center gap-1.5 shadow-sm transition-all"
+          title="Xáo trộn toàn bộ thứ tự chữ cái trên bảng">
           <i data-lucide="shuffle" class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-indigo-500"></i>
           <span id="shuffle-btn-text">Trộn ngẫu nhiên</span>
         </button>
