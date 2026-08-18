@@ -14,6 +14,7 @@
     evalMode: 'zen',          // 'zen' (instant check) or 'test' (check on submit)
     isShuffled: false,        // Shuffled random order mode
     shuffledItems: null,      // Cached shuffled items
+    revealedHints: new Set(), // Set of cellKeys currently revealing answer
     userAnswers: {},          // key: `${rowId}_${colIndex}` -> value: string
     activeSlotKey: null,      // For Mode 3: currently selected slot
     isSubmitted: false,       // In test mode, whether answers have been checked
@@ -35,7 +36,7 @@
     bindFilterButtons();
     bindActionButtons();
     bindModalButtons();
-    
+
     // Initial Render
     refreshAll();
   }
@@ -68,7 +69,7 @@
 
       const catHeader = document.createElement('div');
       catHeader.className = 'flex items-center justify-between';
-      
+
       const allRowsInCatSelected = cat.rows.every(r => state.selectedRows.has(r.id));
       const someRowsSelected = cat.rows.some(r => state.selectedRows.has(r.id));
 
@@ -93,12 +94,11 @@
         const isSelected = state.selectedRows.has(row.id);
         const pill = document.createElement('button');
         pill.dataset.rowId = row.id;
-        pill.className = `text-xs px-2.5 py-1 rounded-lg font-medium transition-all flex items-center gap-1.5 ${
-          isSelected
-            ? 'bg-sakura-500 text-white shadow-sm shadow-sakura-500/20'
-            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
-        }`;
-        
+        pill.className = `text-xs px-2.5 py-1 rounded-lg font-medium transition-all flex items-center gap-1.5 ${isSelected
+          ? 'bg-sakura-500 text-white shadow-sm shadow-sakura-500/20'
+          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+          }`;
+
         const previewKana = row.items.filter(i => i.kana).map(i => i.kana).slice(0, 2).join('');
         pill.innerHTML = `
           <span>${row.name}</span>
@@ -178,7 +178,7 @@
         if (state.currentTab === tabId) return;
 
         state.currentTab = tabId;
-        
+
         // Update tab styling
         tabs.forEach(t => {
           const isCurrent = t.dataset.tab === tabId;
@@ -260,7 +260,7 @@
       btnShuffleBoard.addEventListener('click', () => {
         state.isShuffled = !state.isShuffled;
         state.shuffledItems = null; // Tạo thứ tự xáo trộn mới
-        
+
         if (state.isShuffled) {
           btnShuffleBoard.className = 'text-[11px] sm:text-xs font-bold px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-indigo-600 text-white border border-indigo-600 shadow-md shadow-indigo-600/30 flex items-center gap-1.5 transition-all';
           if (shuffleBtnText) shuffleBtnText.textContent = 'Đang trộn ngẫu nhiên 🎲';
@@ -391,11 +391,13 @@
   function resetBoardState() {
     state.userAnswers = {};
     state.activeSlotKey = null;
+    state.revealedHints.clear();
     state.isSubmitted = false;
   }
 
   function refreshAll() {
     state.shuffledItems = null;
+    state.revealedHints.clear();
     renderFilterCategories();
     renderMatrix();
     if (state.currentTab === 'fill-hiragana') {
@@ -429,7 +431,10 @@
           <div class="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse"></div>
           <h3 class="font-bold text-sm text-slate-800 dark:text-slate-200">Ma Trận Xáo Trộn Ngẫu Nhiên (${state.shuffledItems.length} chữ)</h3>
         </div>
-        <span class="text-[11px] text-indigo-500 font-semibold font-mono hidden sm:inline">Random Shuffled Mode</span>
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] text-slate-400 dark:text-slate-500 hidden sm:inline">💡 Bấm vào chữ để xem/ẩn đáp án</span>
+          <span class="text-[11px] text-indigo-500 font-semibold font-mono hidden sm:inline">Random Mode</span>
+        </div>
       `;
       groupSection.appendChild(header);
 
@@ -517,10 +522,13 @@
 
       // Section Header
       const header = document.createElement('div');
-      header.className = 'flex items-center gap-2 border-b border-slate-200/80 dark:border-slate-800 pb-1.5';
+      header.className = 'flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-1.5';
       header.innerHTML = `
-        <div class="w-2.5 h-2.5 rounded-full bg-sakura-500"></div>
-        <h3 class="font-bold text-sm text-slate-800 dark:text-slate-200">${catGroup.name}</h3>
+        <div class="flex items-center gap-2">
+          <div class="w-2.5 h-2.5 rounded-full bg-sakura-500"></div>
+          <h3 class="font-bold text-sm text-slate-800 dark:text-slate-200">${catGroup.name}</h3>
+        </div>
+        <span class="text-[10px] text-slate-400 dark:text-slate-500 hidden sm:inline">💡 Bấm vào chữ để xem/ẩn đáp án</span>
       `;
       groupSection.appendChild(header);
 
@@ -615,15 +623,16 @@
     return card;
   }
 
-  // 2. Mode: Hiragana to Romaji Fill (Nhìn chữ Nhật ➔ Tự gõ Romaji)
+  // 2. Mode: Hiragana to Romaji Fill (Nhìn chữ Nhật ➔ Tự gõ Romaji, Click để Xem/Ẩn đáp án)
   function createRomajiFillCell(item, cellKey) {
     const card = document.createElement('div');
     const userAnswer = (state.userAnswers[cellKey] || '').toLowerCase().trim();
     const isCorrect = item.alternatives.includes(userAnswer);
     const hasAnswer = userAnswer.length > 0;
+    const isHintRevealed = state.revealedHints.has(cellKey);
 
-    let borderClass = 'border-slate-200 dark:border-slate-700';
-    let bgClass = 'bg-slate-50/70 dark:bg-slate-800/40';
+    let borderClass = isHintRevealed ? 'border-amber-400 ring-2 ring-amber-400/20' : 'border-slate-200 dark:border-slate-700';
+    let bgClass = isHintRevealed ? 'bg-amber-50/30 dark:bg-amber-950/10' : 'bg-slate-50/70 dark:bg-slate-800/40';
 
     if (state.evalMode === 'zen' && hasAnswer) {
       if (isCorrect) {
@@ -639,12 +648,36 @@
       }
     }
 
-    card.className = `h-16 sm:h-24 rounded-xl border ${borderClass} ${bgClass} transition-all flex flex-col items-center justify-between p-1 sm:p-2 group focus-within:ring-2 focus-within:ring-sakura-500 focus-within:border-sakura-500`;
-    
-    // Hiragana Display
+    card.className = `h-16 sm:h-24 rounded-xl border ${borderClass} ${bgClass} transition-all flex flex-col items-center justify-between p-1 sm:p-2 group focus-within:ring-2 focus-within:ring-sakura-500 focus-within:border-sakura-500 relative`;
+
+    // Top Area: Hiragana character with click-to-reveal hint toggle
+    const topArea = document.createElement('div');
+    topArea.className = 'w-full flex items-center justify-center gap-1 cursor-pointer select-none hover:scale-105 transition-transform';
+    topArea.title = isHintRevealed ? 'Bấm để ẩn đáp án' : 'Bấm để xem đáp án';
+
     const kanaSpan = document.createElement('span');
-    kanaSpan.className = 'font-jp font-bold text-base sm:text-2xl text-slate-800 dark:text-slate-100 leading-none mt-0.5 sm:mt-1';
+    kanaSpan.className = 'font-jp font-bold text-base sm:text-2xl text-slate-800 dark:text-slate-100 leading-none';
     kanaSpan.textContent = item.kana;
+    topArea.appendChild(kanaSpan);
+
+    if (isHintRevealed) {
+      const hintTag = document.createElement('span');
+      hintTag.className = 'text-[9px] sm:text-[11px] font-mono font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 px-1.5 py-0.2 rounded border border-amber-300 dark:border-amber-700 animate-pop';
+      hintTag.textContent = `💡${item.romaji}`;
+      topArea.appendChild(hintTag);
+    }
+
+    // Toggle hint on click
+    topArea.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (state.revealedHints.has(cellKey)) {
+        state.revealedHints.delete(cellKey);
+      } else {
+        state.revealedHints.add(cellKey);
+      }
+      renderMatrix();
+      if (state.currentTab === 'fill-hiragana') renderPalette();
+    });
 
     // Romaji Input
     const input = document.createElement('input');
@@ -673,12 +706,10 @@
       const nowCorrect = item.alternatives.includes(val);
       if (state.evalMode === 'zen') {
         if (nowCorrect) {
-          card.className = `h-20 sm:h-24 rounded-xl border border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/40 dark:bg-emerald-950/20 transition-all flex flex-col items-center justify-between p-1.5 sm:p-2 animate-pop`;
-          
-          // SMART AUTO-ADVANCE: Move focus to the very next input
+          card.className = `h-16 sm:h-24 rounded-xl border border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/40 dark:bg-emerald-950/20 transition-all flex flex-col items-center justify-between p-1 sm:p-2 animate-pop relative`;
           focusNextInput(cellKey);
         } else {
-          card.className = `h-20 sm:h-24 rounded-xl border ${val.length > 0 ? 'border-rose-400 ring-2 ring-rose-400/20 bg-rose-50/40 dark:bg-rose-950/20' : 'border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/40'} transition-all flex flex-col items-center justify-between p-1.5 sm:p-2`;
+          card.className = `h-16 sm:h-24 rounded-xl border ${val.length > 0 ? 'border-rose-400 ring-2 ring-rose-400/20 bg-rose-50/40 dark:bg-rose-950/20' : 'border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/40'} transition-all flex flex-col items-center justify-between p-1 sm:p-2 relative`;
         }
       }
 
@@ -700,21 +731,22 @@
       }
     });
 
-    card.appendChild(kanaSpan);
+    card.appendChild(topArea);
     card.appendChild(input);
 
     return card;
   }
 
-  // 3. Mode: Romaji to Hiragana Fill (Nhìn Romaji ➔ Chọn/Điền Chữ Nhật)
+  // 3. Mode: Romaji to Hiragana Fill (Nhìn Romaji ➔ Chọn/Điền Chữ Nhật, Click để Xem/Ẩn đáp án)
   function createHiraganaFillCell(item, cellKey) {
     const card = document.createElement('div');
     const placedKana = state.userAnswers[cellKey];
     const isCorrect = placedKana === item.kana;
     const isSlotActive = state.activeSlotKey === cellKey;
+    const isHintRevealed = state.revealedHints.has(cellKey);
 
-    let borderClass = isSlotActive ? 'border-indigo-500 ring-2 ring-indigo-500/30' : 'border-slate-200 dark:border-slate-700';
-    let bgClass = isSlotActive ? 'bg-indigo-50/50 dark:bg-indigo-950/30' : 'bg-slate-50/70 dark:bg-slate-800/40';
+    let borderClass = isSlotActive ? 'border-indigo-500 ring-2 ring-indigo-500/30' : (isHintRevealed ? 'border-amber-400 ring-2 ring-amber-400/20' : 'border-slate-200 dark:border-slate-700');
+    let bgClass = isSlotActive ? 'bg-indigo-50/50 dark:bg-indigo-950/30' : (isHintRevealed ? 'bg-amber-50/30 dark:bg-amber-950/10' : 'bg-slate-50/70 dark:bg-slate-800/40');
 
     if (placedKana) {
       if (state.evalMode === 'zen') {
@@ -735,10 +767,29 @@
     card.className = `h-16 sm:h-24 rounded-xl border ${borderClass} ${bgClass} transition-all flex flex-col items-center justify-between p-1 sm:p-2 cursor-pointer hover:border-indigo-400 relative group`;
     card.dataset.slotKey = cellKey;
 
-    // Romaji Hint Tag at Top
-    const romajiTag = document.createElement('span');
-    romajiTag.className = 'font-mono text-[9px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700/80 px-1.5 sm:px-2 py-0.2 sm:py-0.5 rounded';
-    romajiTag.textContent = item.romaji;
+    // Romaji Hint Tag at Top (Clickable to reveal/hide answer)
+    const romajiTag = document.createElement('button');
+    romajiTag.className = `font-mono text-[9px] sm:text-[11px] font-bold px-1.5 sm:px-2 py-0.2 sm:py-0.5 rounded transition-all flex items-center gap-1 ${
+      isHintRevealed
+        ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700'
+        : 'bg-slate-100 dark:bg-slate-700/80 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
+    }`;
+    romajiTag.title = isHintRevealed ? 'Bấm để ẩn đáp án' : 'Bấm để xem đáp án';
+    romajiTag.innerHTML = `
+      <span>${item.romaji}</span>
+      ${isHintRevealed ? `<span class="font-jp text-[11px] text-amber-600 dark:text-amber-400 font-black animate-pop">💡${item.kana}</span>` : ''}
+    `;
+
+    romajiTag.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (state.revealedHints.has(cellKey)) {
+        state.revealedHints.delete(cellKey);
+      } else {
+        state.revealedHints.add(cellKey);
+      }
+      renderMatrix();
+      if (state.currentTab === 'fill-hiragana') renderPalette();
+    });
 
     // Hiragana Slot / Placed Content
     const slotBody = document.createElement('div');
@@ -748,7 +799,7 @@
       const kanaSpan = document.createElement('span');
       kanaSpan.className = 'font-jp font-bold text-lg sm:text-3xl text-indigo-700 dark:text-indigo-300 animate-pop';
       kanaSpan.textContent = placedKana;
-      
+
       // Remove button on hover / touch
       const removeBtn = document.createElement('button');
       removeBtn.className = 'absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 flex items-center justify-center text-[10px] opacity-70 sm:opacity-0 group-hover:opacity-100 transition-opacity';
@@ -803,7 +854,7 @@
     container.innerHTML = '';
 
     const validItems = getAllValidItems();
-    
+
     // Count placed characters
     const placedCounts = {};
     Object.values(state.userAnswers).forEach(k => {
@@ -825,11 +876,10 @@
       const available = totalNeeded - used;
 
       const btn = document.createElement('button');
-      btn.className = `w-9 h-9 sm:w-12 sm:h-12 rounded-xl font-jp font-bold text-base sm:text-xl flex items-center justify-center transition-all relative shrink-0 ${
-        available > 0
-          ? 'bg-white dark:bg-slate-800 border-2 border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-300 hover:border-indigo-500 hover:scale-105 active:scale-95 shadow-sm'
-          : 'bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 text-slate-300 dark:text-slate-600 cursor-not-allowed opacity-50'
-      }`;
+      btn.className = `w-9 h-9 sm:w-12 sm:h-12 rounded-xl font-jp font-bold text-base sm:text-xl flex items-center justify-center transition-all relative shrink-0 ${available > 0
+        ? 'bg-white dark:bg-slate-800 border-2 border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-300 hover:border-indigo-500 hover:scale-105 active:scale-95 shadow-sm'
+        : 'bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 text-slate-300 dark:text-slate-600 cursor-not-allowed opacity-50'
+        }`;
       btn.textContent = kana;
 
       if (totalNeeded > 1) {
