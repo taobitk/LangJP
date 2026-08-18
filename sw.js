@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hiragana-matrix-v2';
+const CACHE_NAME = 'hiragana-matrix-v3';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -35,15 +35,10 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch Event
+// Fetch Event - Stale-while-revalidate / cache first
 self.addEventListener('fetch', (event) => {
   // Only handle GET requests
   if (event.request.method !== 'GET') return;
-
-  // KHÔNG can thiệp vào audio stream để tránh lỗi CORS trên Service Worker
-  if (event.request.url.includes('translate.google.com') || event.request.destination === 'audio') {
-    return;
-  }
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {

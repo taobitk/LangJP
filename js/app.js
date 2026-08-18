@@ -60,29 +60,42 @@
     });
   }
 
-  // --- AUDIO ENGINE (HTML5 Audio + Web Speech API) ---
+  // --- AUDIO ENGINE (Local MP3 Audio + Web Speech API Fallback) ---
   let currentAudio = null;
+
+  const KANA_AUDIO_MAP = {
+    "あ": "a", "い": "i", "う": "u", "え": "e", "お": "o",
+    "か": "ka", "き": "ki", "く": "ku", "け": "ke", "こ": "ko",
+    "さ": "sa", "し": "shi", "す": "su", "せ": "se", "そ": "so",
+    "た": "ta", "ち": "chi", "つ": "tsu", "て": "te", "to": "to",
+    "な": "na", "に": "ni", "ぬ": "nu", "ね": "ne", "の": "no",
+    "は": "ha", "ひ": "hi", "ふ": "fu", "へ": "he", "ほ": "ho",
+    "ま": "ma", "み": "mi", "む": "mu", "め": "me", "も": "mo",
+    "や": "ya", "ゆ": "yu", "よ": "yo",
+    "ら": "ra", "り": "ri", "る": "ru", "れ": "re", "ろ": "ro",
+    "わ": "wa", "を": "wo", "ん": "n",
+    "が": "ga", "ぎ": "gi", "ぐ": "gu", "げ": "ge", "ご": "go",
+    "ざ": "za", "じ": "ji", "ず": "zu", "ぜ": "ze", "ぞ": "zo",
+    "だ": "da", "ぢ": "dji", "づ": "dzu", "で": "de", "ど": "do",
+    "ば": "ba", "び": "bi", "ぶ": "bu", "べ": "be", "ぼ": "bo",
+    "ぱ": "pa", "ぴ": "pi", "ぷ": "pu", "ぺ": "pe", "ぽ": "po",
+    "きゃ": "kya", "きゅ": "kyu", "きょ": "kyo",
+    "しゃ": "sha", "しゅ": "shu", "しょ": "sho",
+    "ちゃ": "cha", "ちゅ": "chu", "ちょ": "cho",
+    "にゃ": "nya", "にゅ": "nyu", "にょ": "nyo",
+    "ひゃ": "hya", "ひゅ": "hyu", "ひょ": "hyo",
+    "みゃ": "mya", "みゅ": "myu", "みょ": "myo",
+    "りゃ": "rya", "りゅ": "ryu", "りょ": "ryo",
+    "ぎゃ": "gya", "ぎゅ": "gyu", "ぎょ": "gyo",
+    "じゃ": "ja", "じゅ": "ju", "じょ": "jo",
+    "びゃ": "bya", "びゅ": "byu", "びょ": "byo",
+    "ぴゃ": "pya", "ぴゅ": "pyu", "ぴょ": "pyo"
+  };
 
   function initSound() {
     const savedSound = localStorage.getItem('hiragana_sound');
     state.soundEnabled = savedSound !== 'false';
     updateSoundUI();
-
-    // Mở khóa âm thanh (Audio Unlocker) trên iOS Safari ngay từ lần chạm đầu tiên
-    function unlockAudio() {
-      if ('speechSynthesis' in window) {
-        try {
-          const dummy = new SpeechSynthesisUtterance('');
-          dummy.lang = 'ja-JP';
-          dummy.volume = 0;
-          window.speechSynthesis.speak(dummy);
-        } catch (e) {}
-      }
-      document.removeEventListener('touchstart', unlockAudio);
-      document.removeEventListener('click', unlockAudio);
-    }
-    document.addEventListener('touchstart', unlockAudio, { once: true, passive: true });
-    document.addEventListener('click', unlockAudio, { once: true });
 
     const btnSound = document.getElementById('btn-sound-toggle');
     if (btnSound) {
@@ -108,45 +121,46 @@
     }
   }
 
-  function speakKana(text) {
-    if (!state.soundEnabled || !text) return;
+  function speakKana(kanaOrItem) {
+    if (!state.soundEnabled) return;
+    const kana = typeof kanaOrItem === 'object' ? kanaOrItem.kana : kanaOrItem;
+    if (!kana) return;
 
-    // 1. Thử Web Speech API trước (Nhanh & Tự nhiên)
-    if ('speechSynthesis' in window) {
+    const file = KANA_AUDIO_MAP[kana];
+    if (file) {
       try {
-        if (window.speechSynthesis.paused) {
-          window.speechSynthesis.resume();
+        if (currentAudio) {
+          currentAudio.pause();
+          currentAudio.currentTime = 0;
         }
-        
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'ja-JP';
-        utterance.rate = 0.85;
-        utterance.volume = 1.0;
-
-        const voices = window.speechSynthesis.getVoices();
-        const jpVoice = voices.find(v => v.lang && (v.lang.includes('ja') || v.lang.includes('JP')));
-        if (jpVoice) {
-          utterance.voice = jpVoice;
+        currentAudio = new Audio(`./audio/${file}.mp3`);
+        currentAudio.playbackRate = 1.0;
+        const playPromise = currentAudio.play();
+        if (playPromise) {
+          playPromise.catch(() => {
+            fallbackSpeechSynthesis(kana);
+          });
         }
-
-        window.speechSynthesis.speak(utterance);
         return;
-      } catch (err) {
-        console.warn('SpeechSynthesis error, fallback to audio:', err);
+      } catch (e) {
+        fallbackSpeechSynthesis(kana);
       }
+    } else {
+      fallbackSpeechSynthesis(kana);
     }
+  }
 
-    // 2. Fallback sang HTML5 Audio CDN nếu Web Speech API không khả dụng
+  function fallbackSpeechSynthesis(text) {
+    if (!('speechSynthesis' in window) || !text) return;
     try {
-      if (currentAudio) {
-        currentAudio.pause();
-        currentAudio.currentTime = 0;
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
       }
-      const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=ja&client=tw-ob`;
-      currentAudio = new Audio(audioUrl);
-      currentAudio.playbackRate = 0.9;
-      currentAudio.play().catch(() => {});
-    } catch (e) {}
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'ja-JP';
+      utterance.rate = 0.85;
+      window.speechSynthesis.speak(utterance);
+    } catch (err) {}
   }
 
   // --- FILTER UI ---
