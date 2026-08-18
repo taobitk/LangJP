@@ -60,13 +60,29 @@
     });
   }
 
-  // --- AUDIO ENGINE (HTML5 Audio + Web Speech API Fallback) ---
+  // --- AUDIO ENGINE (HTML5 Audio + Web Speech API) ---
   let currentAudio = null;
 
   function initSound() {
     const savedSound = localStorage.getItem('hiragana_sound');
     state.soundEnabled = savedSound !== 'false';
     updateSoundUI();
+
+    // Mở khóa âm thanh (Audio Unlocker) trên iOS Safari ngay từ lần chạm đầu tiên
+    function unlockAudio() {
+      if ('speechSynthesis' in window) {
+        try {
+          const dummy = new SpeechSynthesisUtterance('');
+          dummy.lang = 'ja-JP';
+          dummy.volume = 0;
+          window.speechSynthesis.speak(dummy);
+        } catch (e) {}
+      }
+      document.removeEventListener('touchstart', unlockAudio);
+      document.removeEventListener('click', unlockAudio);
+    }
+    document.addEventListener('touchstart', unlockAudio, { once: true, passive: true });
+    document.addEventListener('click', unlockAudio, { once: true });
 
     const btnSound = document.getElementById('btn-sound-toggle');
     if (btnSound) {
@@ -95,7 +111,32 @@
   function speakKana(text) {
     if (!state.soundEnabled || !text) return;
 
-    // Cách 1: HTML5 Audio CDN (Chạy được trên mọi thiết bị iOS Safari kể cả khi iPhone đang gạt rung / chế độ im lặng)
+    // 1. Thử Web Speech API trước (Nhanh & Tự nhiên)
+    if ('speechSynthesis' in window) {
+      try {
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
+        
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'ja-JP';
+        utterance.rate = 0.85;
+        utterance.volume = 1.0;
+
+        const voices = window.speechSynthesis.getVoices();
+        const jpVoice = voices.find(v => v.lang && (v.lang.includes('ja') || v.lang.includes('JP')));
+        if (jpVoice) {
+          utterance.voice = jpVoice;
+        }
+
+        window.speechSynthesis.speak(utterance);
+        return;
+      } catch (err) {
+        console.warn('SpeechSynthesis error, fallback to audio:', err);
+      }
+    }
+
+    // 2. Fallback sang HTML5 Audio CDN nếu Web Speech API không khả dụng
     try {
       if (currentAudio) {
         currentAudio.pause();
@@ -104,29 +145,8 @@
       const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=ja&client=tw-ob`;
       currentAudio = new Audio(audioUrl);
       currentAudio.playbackRate = 0.9;
-      const playPromise = currentAudio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          // Fallback sang Web Speech API nếu bị chặn mạng
-          fallbackSpeechSynthesis(text);
-        });
-      }
-    } catch (e) {
-      fallbackSpeechSynthesis(text);
-    }
-  }
-
-  function fallbackSpeechSynthesis(text) {
-    if (!('speechSynthesis' in window)) return;
-    try {
-      if (window.speechSynthesis.paused) {
-        window.speechSynthesis.resume();
-      }
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'ja-JP';
-      utterance.rate = 0.85;
-      window.speechSynthesis.speak(utterance);
-    } catch (err) {}
+      currentAudio.play().catch(() => {});
+    } catch (e) {}
   }
 
   // --- FILTER UI ---
