@@ -662,21 +662,32 @@
 
     if (isHintRevealed) {
       const hintTag = document.createElement('span');
-      hintTag.className = 'text-[9px] sm:text-[11px] font-mono font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 px-1.5 py-0.2 rounded border border-amber-300 dark:border-amber-700 animate-pop';
+      hintTag.className = 'hint-tag text-[9px] sm:text-[11px] font-mono font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 px-1.5 py-0.2 rounded border border-amber-300 dark:border-amber-700 animate-pop';
       hintTag.textContent = `💡${item.romaji}`;
       topArea.appendChild(hintTag);
     }
 
-    // Toggle hint on click
+    // Toggle hint on click (Cập nhật DOM cục bộ trên ô này, KHÔNG reload cả bảng)
     topArea.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (state.revealedHints.has(cellKey)) {
+      const isRevealed = state.revealedHints.has(cellKey);
+      if (isRevealed) {
         state.revealedHints.delete(cellKey);
+        card.classList.remove('border-amber-400', 'ring-2', 'ring-amber-400/20', 'bg-amber-50/30', 'dark:bg-amber-950/10');
+        topArea.title = 'Bấm để xem đáp án';
+        const existingHint = topArea.querySelector('.hint-tag');
+        if (existingHint) existingHint.remove();
       } else {
         state.revealedHints.add(cellKey);
+        card.classList.add('border-amber-400', 'ring-2', 'ring-amber-400/20', 'bg-amber-50/30', 'dark:bg-amber-950/10');
+        topArea.title = 'Bấm để ẩn đáp án';
+        if (!topArea.querySelector('.hint-tag')) {
+          const hintTag = document.createElement('span');
+          hintTag.className = 'hint-tag text-[9px] sm:text-[11px] font-mono font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 px-1.5 py-0.2 rounded border border-amber-300 dark:border-amber-700 animate-pop';
+          hintTag.textContent = `💡${item.romaji}`;
+          topArea.appendChild(hintTag);
+        }
       }
-      renderMatrix();
-      if (state.currentTab === 'fill-hiragana') renderPalette();
     });
 
     // Romaji Input
@@ -767,7 +778,7 @@
     card.className = `h-16 sm:h-24 rounded-xl border ${borderClass} ${bgClass} transition-all flex flex-col items-center justify-between p-1 sm:p-2 cursor-pointer hover:border-indigo-400 relative group`;
     card.dataset.slotKey = cellKey;
 
-    // Romaji Hint Tag at Top (Clickable to reveal/hide answer)
+    // Romaji Hint Tag at Top (Clickable to reveal/hide answer in place)
     const romajiTag = document.createElement('button');
     romajiTag.className = `font-mono text-[9px] sm:text-[11px] font-bold px-1.5 sm:px-2 py-0.2 sm:py-0.5 rounded transition-all flex items-center gap-1 ${
       isHintRevealed
@@ -777,18 +788,32 @@
     romajiTag.title = isHintRevealed ? 'Bấm để ẩn đáp án' : 'Bấm để xem đáp án';
     romajiTag.innerHTML = `
       <span>${item.romaji}</span>
-      ${isHintRevealed ? `<span class="font-jp text-[11px] text-amber-600 dark:text-amber-400 font-black animate-pop">💡${item.kana}</span>` : ''}
+      ${isHintRevealed ? `<span class="hint-tag font-jp text-[11px] text-amber-600 dark:text-amber-400 font-black animate-pop">💡${item.kana}</span>` : ''}
     `;
 
+    // Toggle hint in-place (Cập nhật DOM cục bộ trên thẻ này)
     romajiTag.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (state.revealedHints.has(cellKey)) {
+      const isRevealed = state.revealedHints.has(cellKey);
+      if (isRevealed) {
         state.revealedHints.delete(cellKey);
+        card.classList.remove('border-amber-400', 'ring-2', 'ring-amber-400/20', 'bg-amber-50/30', 'dark:bg-amber-950/10');
+        romajiTag.className = 'font-mono text-[9px] sm:text-[11px] font-bold px-1.5 sm:px-2 py-0.2 sm:py-0.5 rounded transition-all flex items-center gap-1 bg-slate-100 dark:bg-slate-700/80 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600';
+        romajiTag.title = 'Bấm để xem đáp án';
+        const existingHint = romajiTag.querySelector('.hint-tag');
+        if (existingHint) existingHint.remove();
       } else {
         state.revealedHints.add(cellKey);
+        card.classList.add('border-amber-400', 'ring-2', 'ring-amber-400/20', 'bg-amber-50/30', 'dark:bg-amber-950/10');
+        romajiTag.className = 'font-mono text-[9px] sm:text-[11px] font-bold px-1.5 sm:px-2 py-0.2 sm:py-0.5 rounded transition-all flex items-center gap-1 bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700';
+        romajiTag.title = 'Bấm để ẩn đáp án';
+        if (!romajiTag.querySelector('.hint-tag')) {
+          const hintTag = document.createElement('span');
+          hintTag.className = 'hint-tag font-jp text-[11px] text-amber-600 dark:text-amber-400 font-black animate-pop';
+          hintTag.textContent = `💡${item.kana}`;
+          romajiTag.appendChild(hintTag);
+        }
       }
-      renderMatrix();
-      if (state.currentTab === 'fill-hiragana') renderPalette();
     });
 
     // Hiragana Slot / Placed Content
