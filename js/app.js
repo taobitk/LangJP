@@ -93,17 +93,24 @@
   function speakKana(text) {
     if (!state.soundEnabled || !('speechSynthesis' in window) || !text) return;
     
+    // Đánh thức engine âm thanh nếu Safari/iOS đưa vào trạng thái ngủ đông (paused)
+    if (window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
+    }
+
     window.speechSynthesis.cancel(); // Hủy âm thanh đang phát dở
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'ja-JP';
     utterance.rate = 0.85; // Tốc độ chuẩn rõ ràng cho người học
     utterance.pitch = 1.0;
 
-    // Tìm giọng tiếng Nhật có sẵn trong trình duyệt nếu có
+    // Tìm giọng tiếng Nhật có sẵn trong trình duyệt (Kyoko/Otoya trên Safari, Google trên Chrome)
     const voices = window.speechSynthesis.getVoices();
-    const jpVoice = voices.find(v => v.lang.includes('ja') || v.lang.includes('JP'));
-    if (jpVoice) {
-      utterance.voice = jpVoice;
+    if (voices.length > 0) {
+      const jpVoice = voices.find(v => v.lang && (v.lang.includes('ja') || v.lang.includes('JP')));
+      if (jpVoice) {
+        utterance.voice = jpVoice;
+      }
     }
 
     window.speechSynthesis.speak(utterance);
