@@ -301,11 +301,19 @@
   <!-- Service Worker Registration -->
   <script>
     if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-      window.addEventListener('load', () => {
+      const registerSW = () => {
         navigator.serviceWorker.register('./sw.js')
-          .then((reg) => console.log('Service Worker Registered (Offline Ready):', reg.scope))
-          .catch((err) => console.warn('Service Worker registration failed:', err));
-      });
+          .then((reg) => {
+            console.log('PWA Service Worker Active (Bai 1):', reg.scope);
+            reg.update();
+          })
+          .catch((err) => console.warn('Service Worker failed:', err));
+      };
+      if (document.readyState === 'complete') {
+        registerSW();
+      } else {
+        window.addEventListener('load', registerSW);
+      }
     }
   </script>
 </body>
