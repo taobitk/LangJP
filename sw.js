@@ -1,4 +1,4 @@
-const CACHE_NAME = 'langjp-pwa-v16';
+const CACHE_NAME = 'langjp-pwa-v17';
 
 // Core local files that MUST be cached for 100% offline capability
 const CORE_ASSETS = [

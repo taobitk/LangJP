@@ -487,9 +487,22 @@
         updateStats();
       });
 
+      inputKana.addEventListener('blur', () => {
+        if (state.autoImeEnabled && window.JapaneseIME) {
+          const isKatakanaWord = /[\u30A0-\u30FF]/.test(item.kana || item.japanese);
+          inputKana.value = window.JapaneseIME.finalizeKana(inputKana.value, isKatakanaWord);
+          answer.kana = inputKana.value.trim();
+        }
+      });
+
       inputKana.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === 'Tab') {
           e.preventDefault();
+          if (state.autoImeEnabled && window.JapaneseIME) {
+            const isKatakanaWord = /[\u30A0-\u30FF]/.test(item.kana || item.japanese);
+            inputKana.value = window.JapaneseIME.finalizeKana(inputKana.value, isKatakanaWord);
+            answer.kana = inputKana.value.trim();
+          }
           if (hasKanji && inputKanji) {
             inputKanji.focus();
           } else {
@@ -732,7 +745,8 @@
     const clean = inputVal.toLowerCase().replace(/[~～\s]/g, '').trim();
     const cleanRomaji = item.romaji.toLowerCase().replace(/[~～\[\]\s]/g, '').trim();
     const cleanKana = item.kana.replace(/[~～\[\]\s]/g, '').trim();
-    const convertedInput = window.JapaneseIME ? window.JapaneseIME.toHiragana(clean) : clean;
+    const isKatakanaWord = /[\u30A0-\u30FF]/.test(item.kana || item.japanese);
+    const convertedInput = window.JapaneseIME ? window.JapaneseIME.finalizeKana(clean, isKatakanaWord) : clean;
 
     if (clean === cleanRomaji || clean === cleanKana || convertedInput === cleanKana) return true;
     if (item.hints && item.hints.some(h => clean === h.toLowerCase().replace(/[~～\s]/g, '').trim())) return true;
