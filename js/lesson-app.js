@@ -1,16 +1,26 @@
 /**
- * Minna no Nihongo - Lesson 1 Interactive App Logic
+ * Universal Lesson Learning Engine
+ * Works dynamically with any window.CURRENT_LESSON data
  */
 
 (function () {
   'use strict';
 
+  // Ensure lesson data is loaded
+  const lesson = window.CURRENT_LESSON || {
+    id: 1,
+    title: "Bài Học",
+    subtitle: "Từ Vựng",
+    items: []
+  };
+
   // --- STATE ---
   const state = {
+    lessonId: lesson.id,
     currentTab: 'flashcards', // 'flashcards', 'type-japanese', 'type-vietnamese'
-    evalMode: 'zen',          // 'zen' (instant check) or 'test' (check on submit)
+    evalMode: 'zen',          // 'zen' or 'test'
     isShuffled: false,
-    items: [...BAI1_DATA],
+    items: [...lesson.items],
     userAnswers: {},          // key: item.id -> value string
     revealedHints: new Set(), // Set of item ids currently showing hint
     soundEnabled: true,
@@ -18,7 +28,7 @@
     timerSeconds: 0,
     timerInterval: null,
     isTimerRunning: false,
-    masteredIds: new Set(JSON.parse(localStorage.getItem('bai1_mastered') || '[]')),
+    masteredIds: new Set(JSON.parse(localStorage.getItem(`lesson_${lesson.id}_mastered`) || '[]')),
   };
 
   // --- AUDIO ENGINE ---
@@ -125,7 +135,7 @@
   function bindEvents() {
     // Mode Tabs
     document.querySelectorAll('[data-tab]').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+      btn.addEventListener('click', () => {
         const tab = btn.dataset.tab;
         if (state.currentTab === tab) return;
 
@@ -161,10 +171,10 @@
       btnShuffle.addEventListener('click', () => {
         state.isShuffled = !state.isShuffled;
         if (state.isShuffled) {
-          state.items = [...BAI1_DATA].sort(() => Math.random() - 0.5);
+          state.items = [...lesson.items].sort(() => Math.random() - 0.5);
           btnShuffle.classList.add('bg-indigo-50', 'dark:bg-indigo-950/60', 'border-indigo-300', 'dark:border-indigo-700', 'text-indigo-600', 'dark:text-indigo-400');
         } else {
-          state.items = [...BAI1_DATA];
+          state.items = [...lesson.items];
           btnShuffle.classList.remove('bg-indigo-50', 'dark:bg-indigo-950/60', 'border-indigo-300', 'dark:border-indigo-700', 'text-indigo-600', 'dark:text-indigo-400');
         }
         renderContent();
@@ -326,7 +336,6 @@
         </div>
       `;
 
-      // Play audio on card click
       card.querySelector('.cursor-pointer').addEventListener('click', () => {
         speakJapanese(item.japanese);
       });
@@ -335,7 +344,6 @@
         speakJapanese(item.japanese);
       });
 
-      // Toggle Mastered
       card.querySelector('.btn-toggle-master').addEventListener('click', (e) => {
         e.stopPropagation();
         if (state.masteredIds.has(item.id)) {
@@ -343,7 +351,7 @@
         } else {
           state.masteredIds.add(item.id);
         }
-        localStorage.setItem('bai1_mastered', JSON.stringify(Array.from(state.masteredIds)));
+        localStorage.setItem(`lesson_${state.lessonId}_mastered`, JSON.stringify(Array.from(state.masteredIds)));
         renderContent();
         updateStats();
         if (window.lucide) lucide.createIcons();
@@ -363,8 +371,6 @@
     state.items.forEach(item => {
       const userAnswer = (state.userAnswers[item.id] || '').toLowerCase().trim();
       const isHintRevealed = state.revealedHints.has(item.id);
-
-      // Check correctness against romaji or kana
       const isCorrect = isAnswerCorrect(userAnswer, item);
       const hasAnswer = userAnswer.length > 0;
 
@@ -380,7 +386,6 @@
       const card = document.createElement('div');
       card.className = `rounded-2xl p-3.5 sm:p-4 border ${borderClass} ${bgClass} shadow-sm transition-all flex flex-col justify-between gap-2.5 relative group`;
 
-      // Top Question
       const topArea = document.createElement('div');
       topArea.className = 'flex items-start justify-between gap-2 cursor-pointer';
       topArea.title = isHintRevealed ? 'Bấm để ẩn đáp án' : 'Bấm để xem đáp án';
@@ -393,7 +398,6 @@
         ${isHintRevealed ? `<span class="hint-tag text-[11px] font-bold font-jp bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-lg border border-amber-300 dark:border-amber-700 animate-pop shrink-0">💡 ${item.japanese}</span>` : `<span class="text-[10px] text-slate-400 hover:text-amber-500 shrink-0">💡 Xem</span>`}
       `;
 
-      // Click to toggle hint
       topArea.addEventListener('click', () => {
         if (state.revealedHints.has(item.id)) {
           state.revealedHints.delete(item.id);
@@ -405,7 +409,6 @@
         if (window.lucide) lucide.createIcons();
       });
 
-      // Input Field
       const input = document.createElement('input');
       input.type = 'text';
       input.dataset.itemId = item.id;
@@ -456,7 +459,6 @@
     state.items.forEach(item => {
       const userAnswer = (state.userAnswers[item.id] || '').toLowerCase().trim();
       const isHintRevealed = state.revealedHints.has(item.id);
-
       const isCorrect = isVietnameseCorrect(userAnswer, item);
       const hasAnswer = userAnswer.length > 0;
 
@@ -472,7 +474,6 @@
       const card = document.createElement('div');
       card.className = `rounded-2xl p-3.5 sm:p-4 border ${borderClass} ${bgClass} shadow-sm transition-all flex flex-col justify-between gap-2.5 relative group`;
 
-      // Top Question
       const topArea = document.createElement('div');
       topArea.className = 'flex items-start justify-between gap-2 cursor-pointer';
       topArea.title = isHintRevealed ? 'Bấm để ẩn đáp án' : 'Bấm để xem đáp án';
@@ -486,7 +487,6 @@
         ${isHintRevealed ? `<span class="hint-tag text-[11px] font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-lg border border-amber-300 dark:border-amber-700 animate-pop shrink-0 max-w-[140px] truncate">💡 ${item.vietnamese}</span>` : `<span class="text-[10px] text-slate-400 hover:text-amber-500 shrink-0">💡 Xem</span>`}
       `;
 
-      // Click to toggle hint
       topArea.addEventListener('click', () => {
         if (state.revealedHints.has(item.id)) {
           state.revealedHints.delete(item.id);
@@ -498,7 +498,6 @@
         if (window.lucide) lucide.createIcons();
       });
 
-      // Input Field
       const input = document.createElement('input');
       input.type = 'text';
       input.dataset.itemId = item.id;
@@ -550,7 +549,6 @@
     const clean = inputVal.toLowerCase().trim();
     const cleanNoAccents = removeAccents(clean);
 
-    // Matches Romaji or Kana or Kanji
     if (clean === item.romaji.toLowerCase().replace(/~/g, '').trim()) return true;
     if (clean === item.kana.trim() || clean === item.japanese.trim()) return true;
     if (item.hints && item.hints.some(h => cleanNoAccents.includes(removeAccents(h)))) return true;
@@ -562,7 +560,6 @@
     const userClean = removeAccents(inputVal);
     const targetClean = removeAccents(item.vietnamese);
 
-    // Direct match or partial keyword match in hints
     if (targetClean.includes(userClean) && userClean.length >= 2) return true;
     if (item.hints && item.hints.some(h => userClean === removeAccents(h))) return true;
     return false;

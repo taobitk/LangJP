@@ -1,13 +1,13 @@
 /**
- * Japanese Hiragana Learning Dataset
- * Includes Gojuon (Basic 46), Dakuten/Handakuten (25), and Yoon (Combinations 33)
+ * Hiragana Syllabary Master Dataset
+ * 46 Gojuon + 25 Dakuten/Handakuten + 33 Yoon Combinations
  */
 
 const HIRAGANA_DATA = {
   basic: {
     id: "basic",
     name: "Bảng Cơ Bản (Gojuon - 46 chữ)",
-    description: "Các âm cơ bản từ hàng A đến hàng Wa, N",
+    description: "Các nguyên âm và phụ âm cơ bản",
     rows: [
       {
         id: "a",
@@ -91,9 +91,9 @@ const HIRAGANA_DATA = {
         name: "Hàng Ya (や - よ)",
         items: [
           { kana: "や", romaji: "ya", alternatives: ["ya"] },
-          { kana: null, romaji: null }, // Vị trí trống
+          { kana: null, romaji: null },
           { kana: "ゆ", romaji: "yu", alternatives: ["yu"] },
-          { kana: null, romaji: null }, // Vị trí trống
+          { kana: null, romaji: null },
           { kana: "よ", romaji: "yo", alternatives: ["yo"] }
         ]
       },
@@ -188,7 +188,7 @@ const HIRAGANA_DATA = {
   yoon: {
     id: "yoon",
     name: "Bảng Âm Ghép (Yoon - 33 chữ)",
-    description: "Kết hợp với ya, yu, yo nhỏ (ゃ, ゅ, ょ)",
+    description: "Kết hợp âm hàng I với Ya, Yu, Yo nhỏ",
     rows: [
       {
         id: "kya",
@@ -212,9 +212,9 @@ const HIRAGANA_DATA = {
         id: "cha",
         name: "Hàng Cha (ちゃ - ちょ)",
         items: [
-          { kana: "ちゃ", romaji: "cha", alternatives: ["cha", "tya", "cya"] },
-          { kana: "ちゅ", romaji: "chu", alternatives: ["chu", "tyu", "cyu"] },
-          { kana: "ちょ", romaji: "cho", alternatives: ["cho", "tyo", "cyo"] }
+          { kana: "ちゃ", romaji: "cha", alternatives: ["cha", "tya"] },
+          { kana: "ちゅ", romaji: "chu", alternatives: ["chu", "tyu"] },
+          { kana: "ちょ", romaji: "cho", alternatives: ["cho", "tyo"] }
         ]
       },
       {

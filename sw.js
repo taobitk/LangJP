@@ -1,13 +1,13 @@
-const CACHE_NAME = 'hiragana-matrix-v4';
+const CACHE_NAME = 'hiragana-matrix-v5';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './bai1.html',
-  './js/data.js',
-  './js/app.js',
-  './js/bai1-data.js',
-  './js/bai1-app.js',
+  './data/hiragana.js',
+  './data/bai1.js',
   './data/bai1.csv',
+  './js/hiragana-app.js',
+  './js/lesson-app.js',
   './manifest.json',
   'https://cdn.tailwindcss.com',
   'https://unpkg.com/lucide@latest',
