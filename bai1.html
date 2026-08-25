@@ -89,127 +89,126 @@
   </style>
 </head>
 
-<body
-  class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-full font-sans transition-colors duration-200 antialiased flex flex-col selection:bg-indigo-500 selection:text-white">
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-full font-sans transition-colors duration-200 flex flex-col">
 
-  <!-- TOP APP HEADER -->
+  <!-- TOP NAVBAR -->
   <header
-    class="sticky top-0 z-30 backdrop-blur-md bg-white/80 dark:bg-slate-900/80 border-b border-slate-200/80 dark:border-slate-800 transition-colors">
-    <div class="max-w-6xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2">
-      <!-- Left: Logo & Navigation Links -->
-      <div class="flex items-center gap-2 sm:gap-3">
-        <a href="./index.html" class="flex items-center gap-2 group" title="Về trang chủ">
+    class="sticky top-0 z-30 backdrop-blur-md bg-white/90 dark:bg-slate-900/90 border-b border-slate-200/80 dark:border-slate-800">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2">
+      <!-- Logo & App Brand -->
+      <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+        <a href="./bai1.html" class="flex items-center gap-2 group">
           <div
-            class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 text-white flex items-center justify-center font-jp font-black text-base sm:text-lg shadow-md shadow-indigo-500/20 group-hover:scale-105 transition-transform">
+            class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 text-white flex items-center justify-center font-jp font-bold text-xs sm:text-sm shadow-md shadow-indigo-500/20 group-hover:scale-105 transition-transform shrink-0">
             第1
           </div>
-          <div>
-            <h1 class="font-bold text-sm sm:text-base leading-tight tracking-tight text-slate-900 dark:text-white">
-              Bài 1: Từ Vựng
-            </h1>
-            <p class="text-[10px] sm:text-xs text-indigo-600 dark:text-indigo-400 font-medium">Minna no Nihongo (46 từ)</p>
+          <div class="leading-tight">
+            <div class="flex items-center gap-1.5">
+              <span class="font-bold text-sm sm:text-base text-slate-900 dark:text-white">LangJP</span>
+              <span class="text-[10px] bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 font-bold px-1.5 py-0.2 rounded-full hidden xs:inline sm:inline">Bài 1</span>
+            </div>
+            <p class="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium hidden sm:block">Minna no Nihongo (46 từ)</p>
           </div>
         </a>
-
-        <!-- Lesson Switcher / Breadcrumbs -->
-        <nav class="hidden md:flex items-center gap-1.5 ml-4 pl-4 border-l border-slate-200 dark:border-slate-800 text-xs">
-          <a href="./index.html" class="px-2.5 py-1 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1 font-medium">
-            <i data-lucide="grid" class="w-3.5 h-3.5"></i>
-            <span>Bảng Hiragana</span>
-          </a>
-          <span class="text-slate-300 dark:text-slate-700">/</span>
-          <span class="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-bold">
-            Bài 1
-          </span>
-        </nav>
       </div>
 
-      <!-- Right: Controls -->
-      <div class="flex items-center gap-1.5 sm:gap-2">
-        <!-- Back to Hiragana Button (Mobile) -->
-        <a href="./index.html" class="md:hidden text-[11px] font-semibold px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center gap-1 transition-colors" title="Về bảng chữ cái">
-          <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
-          <span>Bảng chữ</span>
+      <!-- Navigation Menu Pills (Bảng Hiragana vs Bài 1) -->
+      <nav class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/90 p-1 rounded-xl text-xs font-semibold">
+        <a href="./index.html"
+          class="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-700/60 transition-all flex items-center gap-1.5"
+          title="Bảng chữ cái Hiragana">
+          <i data-lucide="grid" class="w-3.5 h-3.5 text-sakura-500"></i>
+          <span class="hidden sm:inline">Bảng</span><span>Hiragana</span>
         </a>
+        <a href="./bai1.html"
+          class="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm font-bold transition-all flex items-center gap-1.5"
+          title="Từ vựng Bài 1">
+          <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
+          <span>Bài 1</span><span class="hidden sm:inline">: Từ Vựng</span>
+        </a>
+      </nav>
 
+      <!-- Right Controls: Sound & Theme -->
+      <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
         <!-- Sound Toggle -->
         <button id="btn-sound-toggle"
           class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
-          title="Bật / Tắt âm thanh phát âm">
-          <i data-lucide="volume-2" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500" id="sound-icon-on"></i>
-          <i data-lucide="volume-x" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 hidden" id="sound-icon-off"></i>
+          title="Bật / Tắt âm thanh">
+          <i data-lucide="volume-2" class="w-4 h-4 text-emerald-500" id="sound-icon-on"></i>
+          <i data-lucide="volume-x" class="w-4 h-4 text-slate-400 hidden" id="sound-icon-off"></i>
         </button>
 
         <!-- Dark Mode Toggle -->
         <button id="btn-theme-toggle"
-          class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0">
-          <i data-lucide="moon" class="w-3.5 h-3.5 sm:w-4 sm:h-4 dark:hidden"></i>
-          <i data-lucide="sun" class="w-3.5 h-3.5 sm:w-4 sm:h-4 hidden dark:block"></i>
+          class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
+          title="Chuyển chế độ Sáng / Tối">
+          <i data-lucide="moon" class="w-4 h-4 dark:hidden"></i>
+          <i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
         </button>
       </div>
     </div>
   </header>
 
   <!-- MAIN WRAPPER -->
-  <main class="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+  <main class="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-3 sm:py-6 space-y-3 sm:space-y-5">
 
     <!-- HERO CONTROL BAR -->
-    <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-white dark:bg-slate-900/90 p-3 sm:p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+    <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white dark:bg-slate-900/90 p-2.5 sm:p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
       
-      <!-- Segmented Mode Tabs -->
-      <div class="flex p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl max-w-full overflow-x-auto gap-1">
+      <!-- Segmented Mode Tabs (3 tabs distributed evenly on mobile) -->
+      <div class="grid grid-cols-3 gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl w-full lg:w-auto">
         <button data-tab="flashcards"
-          class="flex-1 min-w-[100px] text-xs sm:text-sm font-bold px-3 py-2 rounded-lg bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm transition-all flex items-center justify-center gap-1.5 shrink-0">
-          <i data-lucide="book-open" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
-          <span>Thẻ Từ Vựng</span>
+          class="text-xs sm:text-sm font-bold py-2 px-1 sm:px-3 rounded-lg bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm transition-all flex items-center justify-center gap-1">
+          <i data-lucide="book-open" class="w-3.5 h-3.5 shrink-0"></i>
+          <span class="truncate">Thẻ Từ</span>
         </button>
         <button data-tab="type-japanese"
-          class="flex-1 min-w-[100px] text-xs sm:text-sm font-bold px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all flex items-center justify-center gap-1.5 shrink-0">
-          <i data-lucide="keyboard" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
-          <span>Gõ Tiếng Nhật</span>
+          class="text-xs sm:text-sm font-bold py-2 px-1 sm:px-3 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all flex items-center justify-center gap-1">
+          <i data-lucide="keyboard" class="w-3.5 h-3.5 shrink-0"></i>
+          <span class="truncate">Gõ Nhật</span>
         </button>
         <button data-tab="type-vietnamese"
-          class="flex-1 min-w-[100px] text-xs sm:text-sm font-bold px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all flex items-center justify-center gap-1.5 shrink-0">
-          <i data-lucide="languages" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
-          <span>Gõ Tiếng Việt</span>
+          class="text-xs sm:text-sm font-bold py-2 px-1 sm:px-3 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all flex items-center justify-center gap-1">
+          <i data-lucide="languages" class="w-3.5 h-3.5 shrink-0"></i>
+          <span class="truncate">Gõ Việt</span>
         </button>
       </div>
 
       <!-- Action & Evaluation Controls -->
-      <div class="flex items-center justify-between sm:justify-end gap-2 flex-wrap">
+      <div class="flex items-center justify-between lg:justify-end gap-1.5 sm:gap-2 flex-wrap">
         <!-- Zen / Test Toggle -->
-        <div class="flex items-center p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl text-xs font-semibold">
+        <div class="flex items-center p-0.5 sm:p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl text-xs font-semibold">
           <button id="btn-mode-zen"
             class="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-700 text-sakura-600 dark:text-sakura-400 shadow-sm transition-all flex items-center gap-1">
             <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
-            <span>Zen (Tức thì)</span>
+            <span>Zen</span>
           </button>
           <button id="btn-mode-test"
             class="px-2.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all flex items-center gap-1">
             <i data-lucide="timer" class="w-3.5 h-3.5"></i>
-            <span>Test (Bấm giờ)</span>
+            <span>Test</span>
           </button>
         </div>
 
         <!-- Shuffle Button -->
         <button id="btn-toggle-shuffle"
-          class="text-xs font-semibold px-2.5 sm:px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all flex items-center gap-1.5"
+          class="text-xs font-semibold px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all flex items-center gap-1"
           title="Xáo trộn ngẫu nhiên thứ tự từ vựng">
           <i data-lucide="shuffle" class="w-3.5 h-3.5 text-indigo-500"></i>
-          <span class="hidden sm:inline">Trộn ngẫu nhiên</span>
+          <span>Trộn</span>
         </button>
 
         <!-- Reset Button -->
         <button id="btn-reset-board"
-          class="text-xs font-semibold px-2.5 sm:px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all flex items-center gap-1"
+          class="text-xs font-semibold px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all flex items-center gap-1"
           title="Làm lại từ đầu">
           <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
-          <span class="hidden sm:inline">Làm lại</span>
+          <span>Làm lại</span>
         </button>
 
         <!-- Submit Test Button -->
         <button id="btn-submit-test"
-          class="hidden text-xs font-bold px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1 shadow-md shadow-emerald-600/20 transition-all">
+          class="hidden text-xs font-bold px-3 py-1.5 sm:py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1 shadow-md shadow-emerald-600/20 transition-all">
           <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
           <span>Nộp Bài</span>
         </button>

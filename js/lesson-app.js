@@ -440,7 +440,7 @@
       inputKana.autocomplete = 'off';
       inputKana.autocapitalize = 'off';
       inputKana.spellcheck = false;
-      inputKana.className = `w-full font-jp font-bold text-xs sm:text-sm bg-slate-50 dark:bg-slate-800/80 border ${isKanaOk ? 'border-emerald-400 text-emerald-700 dark:text-emerald-300' : 'border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white'} rounded-xl py-1.5 px-3 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20`;
+      inputKana.className = `w-full font-jp font-bold text-sm sm:text-base bg-slate-50 dark:bg-slate-800/80 border ${isKanaOk ? 'border-emerald-400 text-emerald-700 dark:text-emerald-300' : 'border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white'} rounded-xl py-2 px-3 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20`;
 
       // Real-time Auto-IME Conversion for Kana
       inputKana.addEventListener('input', (e) => {
@@ -534,7 +534,7 @@
         inputKanji.placeholder = 'Chuyển đổi chữ Hán...';
         inputKanji.autocomplete = 'off';
         inputKanji.spellcheck = false;
-        inputKanji.className = `w-full font-jp font-bold text-xs sm:text-sm bg-slate-50 dark:bg-slate-800/80 border ${isKanjiOk ? 'border-emerald-400 text-emerald-700 dark:text-emerald-300' : 'border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white'} rounded-xl py-1.5 px-3 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20`;
+        inputKanji.className = `w-full font-jp font-bold text-sm sm:text-base bg-slate-50 dark:bg-slate-800/80 border ${isKanjiOk ? 'border-emerald-400 text-emerald-700 dark:text-emerald-300' : 'border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white'} rounded-xl py-2 px-3 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20`;
 
         inputKanji.addEventListener('input', (e) => {
           answer.kanji = e.target.value.trim();
@@ -656,7 +656,7 @@
       input.placeholder = 'Gõ nghĩa tiếng Việt...';
       input.autocomplete = 'off';
       input.spellcheck = false;
-      input.className = 'w-full text-xs sm:text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl py-1.5 px-3 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20';
+      input.className = 'w-full text-sm sm:text-base bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl py-2 px-3 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20';
 
       input.addEventListener('input', (e) => {
         const val = e.target.value;
