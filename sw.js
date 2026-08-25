@@ -1,9 +1,13 @@
-const CACHE_NAME = 'hiragana-matrix-v3';
+const CACHE_NAME = 'hiragana-matrix-v4';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
+  './bai1.html',
   './js/data.js',
   './js/app.js',
+  './js/bai1-data.js',
+  './js/bai1-app.js',
+  './data/bai1.csv',
   './manifest.json',
   'https://cdn.tailwindcss.com',
   'https://unpkg.com/lucide@latest',
@@ -50,7 +54,7 @@ self.addEventListener('fetch', (event) => {
               caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse.clone()));
             }
           })
-          .catch(() => {});
+          .catch(() => { });
         return cachedResponse;
       }
 

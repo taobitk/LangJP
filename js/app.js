@@ -160,7 +160,7 @@
       utterance.lang = 'ja-JP';
       utterance.rate = 0.85;
       window.speechSynthesis.speak(utterance);
-    } catch (err) {}
+    } catch (err) { }
   }
 
   // --- FILTER UI ---
