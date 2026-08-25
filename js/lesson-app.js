@@ -863,5 +863,10 @@
     if (window.lucide) lucide.createIcons();
   }
 
-  document.addEventListener('DOMContentLoaded', init);
+  // --- BOOTSTRAP ---
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();
