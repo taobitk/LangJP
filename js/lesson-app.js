@@ -15,7 +15,7 @@
   // --- STATE ---
   const state = {
     lessonId: lesson.id,
-    currentTab: 'type-japanese', // Default to 'type-japanese' or 'flashcards'
+    currentTab: 'flashcards',    // Mặc định mở Thẻ Từ Vựng đầu tiên
     evalMode: 'zen',             // 'zen' or 'test'
     isShuffled: false,
     autoImeEnabled: true,        // Auto convert Romaji -> Kana
@@ -98,10 +98,21 @@
   function init() {
     initTheme();
     initSound();
+    syncActiveTabUI(state.currentTab);
     bindEvents();
     renderContent();
     updateStats();
     if (window.lucide) lucide.createIcons();
+  }
+
+  function syncActiveTabUI(activeTab) {
+    document.querySelectorAll('[data-tab]').forEach(btn => {
+      if (btn.dataset.tab === activeTab) {
+        btn.className = 'flex-1 min-w-[100px] text-xs sm:text-sm font-bold px-3 py-2 rounded-lg bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm transition-all flex items-center justify-center gap-1.5 shrink-0';
+      } else {
+        btn.className = 'flex-1 min-w-[100px] text-xs sm:text-sm font-bold px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all flex items-center justify-center gap-1.5 shrink-0';
+      }
+    });
   }
 
   // --- THEME ---
@@ -132,13 +143,7 @@
         if (state.currentTab === tab) return;
 
         state.currentTab = tab;
-        document.querySelectorAll('[data-tab]').forEach(b => {
-          b.classList.remove('bg-white', 'dark:bg-slate-700', 'text-indigo-600', 'dark:text-indigo-400', 'shadow-sm');
-          b.classList.add('text-slate-600', 'dark:text-slate-400');
-        });
-        btn.classList.add('bg-white', 'dark:bg-slate-700', 'text-indigo-600', 'dark:text-indigo-400', 'shadow-sm');
-        btn.classList.remove('text-slate-600', 'dark:text-slate-400');
-
+        syncActiveTabUI(tab);
         renderContent();
         updateStats();
         if (window.lucide) lucide.createIcons();

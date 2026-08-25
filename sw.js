@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hiragana-matrix-v7';
+const CACHE_NAME = 'hiragana-matrix-v8';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
