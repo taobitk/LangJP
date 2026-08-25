@@ -5,7 +5,7 @@
  * - Immediate SkipWaiting & ClientsClaim -> Hot-updates across all active tabs
  */
 
-const CACHE_NAME = 'langjp-pwa-v18';
+const CACHE_NAME = 'langjp-pwa-v19';
 
 // Core local files pre-cached for 100% offline capability
 const PRECACHE_CORE = [
@@ -68,6 +68,7 @@ self.addEventListener('activate', (event) => {
 // Fetch: Strategy Routing
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  if (!event.request.url.startsWith('http')) return;
 
   const url = new URL(event.request.url);
 
