@@ -314,6 +314,9 @@
       } else {
         window.addEventListener('load', registerSW);
       }
+      window.addEventListener('focus', () => {
+        navigator.serviceWorker.getRegistration().then(reg => reg && reg.update());
+      });
     }
   </script>
 </body>
