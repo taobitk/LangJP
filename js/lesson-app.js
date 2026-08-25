@@ -628,6 +628,10 @@
 
         if (state.evalMode === 'zen') {
           if (isVietnameseCorrect(val, item)) {
+            input.classList.remove('border-slate-200', 'dark:border-slate-700', 'text-slate-900', 'dark:text-white');
+            input.classList.add('border-emerald-400', 'text-emerald-700', 'dark:text-emerald-300');
+            card.classList.remove('border-slate-200/80', 'dark:border-slate-800');
+            card.classList.add('border-emerald-500', 'ring-2', 'ring-emerald-500/20', 'bg-emerald-50/40', 'dark:bg-emerald-950/20');
             speakJapanese(item.japanese);
             focusNextInput(item.id, 'vietnamese');
           }
@@ -650,37 +654,43 @@
     container.appendChild(grid);
   }
 
-  // --- SMART MATCHING HELPERS ---
-  function removeAccents(str) {
-    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'd').toLowerCase().trim();
+  function cleanVietnamesePhrase(str) {
+    return removeAccents(str)
+      .replace(/[\(\)\[\]\{\}\.,;\/\-–~_]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
-  function isKanaInputCorrect(inputVal, item) {
-    if (!inputVal) return false;
-    const clean = inputVal.toLowerCase().trim();
-    const cleanRomaji = item.romaji.toLowerCase().replace(/[~～\[\]]/g, '').trim();
-    const cleanKana = item.kana.replace(/[~～\[\]]/g, '').trim();
+  function getVietnameseValidOptions(item) {
+    const raw = item.vietnamese || '';
+    const options = new Set();
 
-    if (clean === cleanRomaji || clean === cleanKana) return true;
-    if (window.JapaneseIME && window.JapaneseIME.toHiragana(clean) === cleanKana) return true;
-    if (item.hints && item.hints.some(h => clean === h.toLowerCase().trim())) return true;
-    return false;
-  }
+    // Split by comma, semicolon, slash, or parentheses
+    const phrases = raw.split(/[,;\/\(\)]+/).map(s => cleanVietnamesePhrase(s)).filter(s => s.length > 0);
+    phrases.forEach(p => options.add(p));
 
-  function isKanjiInputCorrect(inputVal, item) {
-    if (!inputVal) return false;
-    const clean = inputVal.trim();
-    const targetKanji = item.kanji.replace(/[~～\[\]\(\)]/g, '').trim();
-    return clean === targetKanji || clean === item.kanji.trim() || clean === item.japanese.trim();
+    // Full phrase as well
+    const fullClean = cleanVietnamesePhrase(raw);
+    if (fullClean) options.add(fullClean);
+
+    // Hints
+    if (item.hints) {
+      item.hints.forEach(h => {
+        const cleanH = cleanVietnamesePhrase(h);
+        if (cleanH) options.add(cleanH);
+      });
+    }
+
+    return Array.from(options);
   }
 
   function isVietnameseCorrect(inputVal, item) {
     if (!inputVal) return false;
-    const userClean = removeAccents(inputVal);
-    const targetClean = removeAccents(item.vietnamese);
-    if (targetClean.includes(userClean) && userClean.length >= 2) return true;
-    if (item.hints && item.hints.some(h => userClean === removeAccents(h))) return true;
-    return false;
+    const userClean = cleanVietnamesePhrase(inputVal);
+    if (!userClean) return false;
+
+    const validOptions = getVietnameseValidOptions(item);
+    return validOptions.some(opt => opt === userClean);
   }
 
   function focusNextInput(currentId, type = 'kana') {
