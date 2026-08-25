@@ -1,10 +1,11 @@
-const CACHE_NAME = 'hiragana-matrix-v6';
+const CACHE_NAME = 'hiragana-matrix-v7';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './bai1.html',
   './data/hiragana.js',
   './data/bai1.js',
+  './js/ime.js',
   './js/hiragana-app.js',
   './js/lesson-app.js',
   './manifest.json',
