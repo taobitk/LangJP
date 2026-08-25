@@ -92,11 +92,20 @@
 
       // 2. Handle 'n'
       if (text[i] === 'n') {
-        if (i + 1 === text.length && text.endsWith('nn')) {
+        // 'nn' -> 'ん'
+        if (i + 1 < text.length && text[i + 1] === 'n') {
           result += 'ん';
           i += 2;
           continue;
-        } else if (i + 1 < text.length && !/[aeiouy]/.test(text[i + 1])) {
+        }
+        // 'n' followed by consonant (except y/vowels) -> 'ん'
+        if (i + 1 < text.length && !/[aeiouy]/.test(text[i + 1])) {
+          result += 'ん';
+          i++;
+          continue;
+        }
+        // 'n' at the end of input or before non-alphabet char -> 'ん'
+        if (i + 1 === text.length || !/[a-z]/.test(text[i + 1])) {
           result += 'ん';
           i++;
           continue;

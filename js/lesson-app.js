@@ -87,7 +87,7 @@
         if (jpVoice) utterance.voice = jpVoice;
         window.speechSynthesis.speak(utterance);
         return;
-      } catch (e) {}
+      } catch (e) { }
     }
 
     try {
@@ -98,8 +98,8 @@
       const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanText)}&tl=ja&client=tw-ob`;
       currentAudio = new Audio(audioUrl);
       currentAudio.playbackRate = 0.9;
-      currentAudio.play().catch(() => {});
-    } catch (e) {}
+      currentAudio.play().catch(() => { });
+    } catch (e) { }
   }
 
   // --- INITIALIZATION ---
@@ -296,11 +296,10 @@
     state.items.forEach(item => {
       const isMastered = state.masteredIds.has(item.id);
       const card = document.createElement('div');
-      card.className = `rounded-2xl p-4 transition-all border ${
-        isMastered 
-          ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/60' 
+      card.className = `rounded-2xl p-4 transition-all border ${isMastered
+          ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/60'
           : 'bg-white dark:bg-slate-900/90 border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md'
-      } flex flex-col justify-between gap-3 group relative`;
+        } flex flex-col justify-between gap-3 group relative`;
 
       card.innerHTML = `
         <div class="flex items-start justify-between gap-2">
@@ -310,11 +309,10 @@
               <i data-lucide="volume-2" class="w-4 h-4"></i>
             </button>
           </div>
-          <button class="btn-toggle-master text-xs px-2 py-0.5 rounded-full font-medium transition-all ${
-            isMastered 
-              ? 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300' 
-              : 'bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-600'
-          }">
+          <button class="btn-toggle-master text-xs px-2 py-0.5 rounded-full font-medium transition-all ${isMastered
+          ? 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300'
+          : 'bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-600'
+        }">
             ${isMastered ? '✓ Đã thuộc' : '○ Chưa thuộc'}
           </button>
         </div>
@@ -396,10 +394,10 @@
           <div class="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 leading-snug mt-0.5">${item.vietnamese}</div>
         </div>
         <div class="hint-badge-wrapper shrink-0">
-          ${isHintRevealed 
-            ? `<span class="hint-tag text-[11px] font-bold font-jp bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-lg border border-amber-300 dark:border-amber-700 animate-pop block max-w-[150px] text-right truncate">💡 ${item.japanese}</span>` 
-            : `<span class="text-[10px] text-slate-400 hover:text-amber-500">💡 Xem</span>`
-          }
+          ${isHintRevealed
+          ? `<span class="hint-tag text-[11px] font-bold font-jp bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-lg border border-amber-300 dark:border-amber-700 animate-pop block max-w-[150px] text-right truncate">💡 ${item.japanese}</span>`
+          : `<span class="text-[10px] text-slate-400 hover:text-amber-500">💡 Xem</span>`
+        }
         </div>
       `;
 
@@ -615,10 +613,10 @@
           <div class="font-mono text-[11px] text-indigo-500 font-semibold">${item.romaji}</div>
         </div>
         <div class="hint-badge-wrapper shrink-0">
-          ${isHintRevealed 
-            ? `<span class="hint-tag text-[11px] font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-lg border border-amber-300 dark:border-amber-700 animate-pop block max-w-[140px] truncate">💡 ${item.vietnamese}</span>` 
-            : `<span class="text-[10px] text-slate-400 hover:text-amber-500">💡 Xem</span>`
-          }
+          ${isHintRevealed
+          ? `<span class="hint-tag text-[11px] font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-lg border border-amber-300 dark:border-amber-700 animate-pop block max-w-[140px] truncate">💡 ${item.vietnamese}</span>`
+          : `<span class="text-[10px] text-slate-400 hover:text-amber-500">💡 Xem</span>`
+        }
         </div>
       `;
 
@@ -731,13 +729,13 @@
 
   function isKanaInputCorrect(inputVal, item) {
     if (!inputVal) return false;
-    const clean = inputVal.toLowerCase().trim();
-    const cleanRomaji = item.romaji.toLowerCase().replace(/[~～\[\]]/g, '').trim();
-    const cleanKana = item.kana.replace(/[~～\[\]]/g, '').trim();
+    const clean = inputVal.toLowerCase().replace(/[~～\s]/g, '').trim();
+    const cleanRomaji = item.romaji.toLowerCase().replace(/[~～\[\]\s]/g, '').trim();
+    const cleanKana = item.kana.replace(/[~～\[\]\s]/g, '').trim();
+    const convertedInput = window.JapaneseIME ? window.JapaneseIME.toHiragana(clean) : clean;
 
-    if (clean === cleanRomaji || clean === cleanKana) return true;
-    if (window.JapaneseIME && window.JapaneseIME.toHiragana(clean) === cleanKana) return true;
-    if (item.hints && item.hints.some(h => clean === h.toLowerCase().trim())) return true;
+    if (clean === cleanRomaji || clean === cleanKana || convertedInput === cleanKana) return true;
+    if (item.hints && item.hints.some(h => clean === h.toLowerCase().replace(/[~～\s]/g, '').trim())) return true;
     return false;
   }
 
