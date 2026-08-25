@@ -1,5 +1,5 @@
 /**
- * Universal Lesson Learning Engine with Built-in Japanese Auto-IME & Kanji Converter
+ * Universal Lesson Learning Engine with In-place DOM Hint Toggle & Built-in Japanese Auto-IME
  */
 
 (function () {
@@ -15,12 +15,12 @@
   // --- STATE ---
   const state = {
     lessonId: lesson.id,
-    currentTab: 'flashcards',    // Mặc định mở Thẻ Từ Vựng đầu tiên
+    currentTab: 'flashcards',    // Default: 'flashcards', 'type-japanese', 'type-vietnamese'
     evalMode: 'zen',             // 'zen' or 'test'
     isShuffled: false,
     autoImeEnabled: true,        // Auto convert Romaji -> Kana
     items: [...lesson.items],
-    userAnswers: {},             // key: item.id -> { kana: string, kanji: string } or string
+    userAnswers: {},             // key: item.id -> { kana: string, kanji: string, vietnamese: string }
     revealedHints: new Set(),
     soundEnabled: true,
     isSubmitted: false,
@@ -29,6 +29,14 @@
     isTimerRunning: false,
     masteredIds: new Set(JSON.parse(localStorage.getItem(`lesson_${lesson.id}_mastered`) || '[]')),
   };
+
+  // Helper to ensure item answer object
+  function getAnswer(itemId) {
+    if (!state.userAnswers[itemId] || typeof state.userAnswers[itemId] !== 'object') {
+      state.userAnswers[itemId] = { kana: '', kanji: '', vietnamese: '' };
+    }
+    return state.userAnswers[itemId];
+  }
 
   // --- AUDIO ENGINE ---
   let currentAudio = null;
@@ -268,6 +276,7 @@
   // --- RENDER CONTENT ---
   function renderContent() {
     const container = document.getElementById('main-container');
+    if (!container) return;
     container.innerHTML = '';
 
     if (state.currentTab === 'flashcards') {
@@ -351,16 +360,10 @@
     grid.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4';
 
     state.items.forEach(item => {
-      // Ensure userAnswers structure
-      if (!state.userAnswers[item.id] || typeof state.userAnswers[item.id] !== 'object') {
-        state.userAnswers[item.id] = { kana: '', kanji: '' };
-      }
-
-      const answer = state.userAnswers[item.id];
+      const answer = getAnswer(item.id);
       const hasKanji = item.kanji && item.kanji !== item.kana && !item.kanji.startsWith('～');
       const isHintRevealed = state.revealedHints.has(item.id);
 
-      // Validation
       const isKanaOk = isKanaInputCorrect(answer.kana, item);
       const isKanjiOk = !hasKanji || isKanjiInputCorrect(answer.kanji, item);
       const isCompleteOk = isKanaOk && isKanjiOk;
@@ -376,6 +379,7 @@
       }
 
       const card = document.createElement('div');
+      card.id = `card-item-${item.id}`;
       card.className = `rounded-2xl p-3.5 sm:p-4 border ${borderClass} ${bgClass} shadow-sm transition-all flex flex-col justify-between gap-3 relative group`;
 
       // Header: Vietnamese meaning + Hint Toggle
@@ -391,21 +395,28 @@
           </div>
           <div class="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 leading-snug mt-0.5">${item.vietnamese}</div>
         </div>
-        ${isHintRevealed 
-          ? `<span class="hint-tag text-[11px] font-bold font-jp bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-lg border border-amber-300 dark:border-amber-700 animate-pop shrink-0 max-w-[150px] text-right truncate">💡 ${item.japanese}</span>` 
-          : `<span class="text-[10px] text-slate-400 hover:text-amber-500 shrink-0">💡 Xem</span>`
-        }
+        <div class="hint-badge-wrapper shrink-0">
+          ${isHintRevealed 
+            ? `<span class="hint-tag text-[11px] font-bold font-jp bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-lg border border-amber-300 dark:border-amber-700 animate-pop block max-w-[150px] text-right truncate">💡 ${item.japanese}</span>` 
+            : `<span class="text-[10px] text-slate-400 hover:text-amber-500">💡 Xem</span>`
+          }
+        </div>
       `;
 
+      // In-place DOM Hint Toggle (Never destroys grid on click)
       topArea.addEventListener('click', () => {
-        if (state.revealedHints.has(item.id)) {
+        const isRevealed = state.revealedHints.has(item.id);
+        const badgeWrapper = card.querySelector('.hint-badge-wrapper');
+        if (isRevealed) {
           state.revealedHints.delete(item.id);
+          if (badgeWrapper) badgeWrapper.innerHTML = `<span class="text-[10px] text-slate-400 hover:text-amber-500">💡 Xem</span>`;
+          card.classList.remove('border-amber-400', 'ring-2', 'ring-amber-400/20', 'bg-amber-50/30', 'dark:bg-amber-950/10');
         } else {
           state.revealedHints.add(item.id);
+          if (badgeWrapper) badgeWrapper.innerHTML = `<span class="hint-tag text-[11px] font-bold font-jp bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-lg border border-amber-300 dark:border-amber-700 animate-pop block max-w-[150px] text-right truncate">💡 ${item.japanese}</span>`;
+          card.classList.add('border-amber-400', 'ring-2', 'ring-amber-400/20', 'bg-amber-50/30', 'dark:bg-amber-950/10');
           speakJapanese(item.japanese);
         }
-        renderContent();
-        if (window.lucide) lucide.createIcons();
       });
 
       // Inputs Container (Kana + Kanji)
@@ -418,7 +429,7 @@
       kanaRow.innerHTML = `
         <div class="flex items-center justify-between text-[10px] font-semibold text-slate-500 dark:text-slate-400">
           <span>1. Cách đọc (Gõ phím thường ➔ Tự ra Kana)</span>
-          ${isKanaOk ? '<span class="text-emerald-500 font-bold">✓ Đúng</span>' : ''}
+          <span class="kana-status-tag ${isKanaOk ? 'text-emerald-500 font-bold' : 'hidden'}">✓ Đúng</span>
         </div>
       `;
 
@@ -448,18 +459,18 @@
         if (state.evalMode === 'test' && !state.isTimerRunning) startTimer();
 
         const okKana = isKanaInputCorrect(answer.kana, item);
+        const statusTag = card.querySelector('.kana-status-tag');
         if (okKana) {
           inputKana.classList.remove('border-slate-200', 'dark:border-slate-700', 'text-slate-900', 'dark:text-white');
           inputKana.classList.add('border-emerald-400', 'text-emerald-700', 'dark:text-emerald-300');
+          if (statusTag) statusTag.classList.remove('hidden');
 
           if (!hasKanji) {
-            // No kanji needed, complete item!
             card.classList.remove('border-slate-200/80', 'dark:border-slate-800');
             card.classList.add('border-emerald-500', 'ring-2', 'ring-emerald-500/20', 'bg-emerald-50/40', 'dark:bg-emerald-950/20');
             speakJapanese(item.japanese);
             focusNextInput(item.id, 'kana');
           } else {
-            // Auto fill Kanji or suggest to next box
             if (!answer.kanji) {
               answer.kanji = item.kanji;
               if (inputKanji) {
@@ -472,6 +483,8 @@
             speakJapanese(item.japanese);
             if (inputKanji) inputKanji.focus();
           }
+        } else {
+          if (statusTag) statusTag.classList.add('hidden');
         }
         updateStats();
       });
@@ -498,7 +511,7 @@
         kanjiRow.innerHTML = `
           <div class="flex items-center justify-between text-[10px] font-semibold text-slate-500 dark:text-slate-400">
             <span>2. Chữ Hán Kanji (Tự chuyển đổi)</span>
-            ${isKanjiOk ? '<span class="text-emerald-500 font-bold">✓ Đúng</span>' : ''}
+            <span class="kanji-status-tag ${isKanjiOk ? 'text-emerald-500 font-bold' : 'hidden'}">✓ Đúng</span>
           </div>
         `;
 
@@ -514,9 +527,15 @@
 
         inputKanji.addEventListener('input', (e) => {
           answer.kanji = e.target.value.trim();
-          if (isKanjiInputCorrect(answer.kanji, item) && isKanaInputCorrect(answer.kana, item)) {
+          const ok = isKanjiInputCorrect(answer.kanji, item);
+          const statusTag = card.querySelector('.kanji-status-tag');
+          if (ok && isKanaInputCorrect(answer.kana, item)) {
+            inputKanji.classList.add('border-emerald-400', 'text-emerald-700', 'dark:text-emerald-300');
+            if (statusTag) statusTag.classList.remove('hidden');
             speakJapanese(item.japanese);
             focusNextInput(item.id, 'kanji');
+          } else {
+            if (statusTag) statusTag.classList.add('hidden');
           }
           updateStats();
         });
@@ -537,6 +556,9 @@
           e.stopPropagation();
           answer.kanji = item.kanji;
           inputKanji.value = item.kanji;
+          inputKanji.classList.add('border-emerald-400', 'text-emerald-700', 'dark:text-emerald-300');
+          const statusTag = card.querySelector('.kanji-status-tag');
+          if (statusTag) statusTag.classList.remove('hidden');
           if (isKanaInputCorrect(answer.kana, item)) {
             speakJapanese(item.japanese);
             focusNextInput(item.id, 'kanji');
@@ -563,7 +585,8 @@
     grid.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4';
 
     state.items.forEach(item => {
-      const userAnswer = (typeof state.userAnswers[item.id] === 'string' ? state.userAnswers[item.id] : (state.userAnswers[item.id]?.vietnamese || '')).toLowerCase().trim();
+      const answer = getAnswer(item.id);
+      const userAnswer = (answer.vietnamese || '').toLowerCase().trim();
       const isHintRevealed = state.revealedHints.has(item.id);
       const isCorrect = isVietnameseCorrect(userAnswer, item);
       const hasAnswer = userAnswer.length > 0;
@@ -578,6 +601,7 @@
       }
 
       const card = document.createElement('div');
+      card.id = `card-vn-item-${item.id}`;
       card.className = `rounded-2xl p-3.5 sm:p-4 border ${borderClass} ${bgClass} shadow-sm transition-all flex flex-col justify-between gap-2.5 relative group`;
 
       const topArea = document.createElement('div');
@@ -590,27 +614,34 @@
           <div class="font-jp font-bold text-base sm:text-lg text-slate-900 dark:text-white leading-tight">${item.japanese}</div>
           <div class="font-mono text-[11px] text-indigo-500 font-semibold">${item.romaji}</div>
         </div>
-        ${isHintRevealed 
-          ? `<span class="hint-tag text-[11px] font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-lg border border-amber-300 dark:border-amber-700 animate-pop shrink-0 max-w-[140px] truncate">💡 ${item.vietnamese}</span>` 
-          : `<span class="text-[10px] text-slate-400 hover:text-amber-500 shrink-0">💡 Xem</span>`
-        }
+        <div class="hint-badge-wrapper shrink-0">
+          ${isHintRevealed 
+            ? `<span class="hint-tag text-[11px] font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-lg border border-amber-300 dark:border-amber-700 animate-pop block max-w-[140px] truncate">💡 ${item.vietnamese}</span>` 
+            : `<span class="text-[10px] text-slate-400 hover:text-amber-500">💡 Xem</span>`
+          }
+        </div>
       `;
 
+      // In-place DOM Hint Toggle (Never wipes grid)
       topArea.addEventListener('click', () => {
-        if (state.revealedHints.has(item.id)) {
+        const isRevealed = state.revealedHints.has(item.id);
+        const badgeWrapper = card.querySelector('.hint-badge-wrapper');
+        if (isRevealed) {
           state.revealedHints.delete(item.id);
+          if (badgeWrapper) badgeWrapper.innerHTML = `<span class="text-[10px] text-slate-400 hover:text-amber-500">💡 Xem</span>`;
+          card.classList.remove('border-amber-400', 'ring-2', 'ring-amber-400/20', 'bg-amber-50/30', 'dark:bg-amber-950/10');
         } else {
           state.revealedHints.add(item.id);
+          if (badgeWrapper) badgeWrapper.innerHTML = `<span class="hint-tag text-[11px] font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-lg border border-amber-300 dark:border-amber-700 animate-pop block max-w-[140px] truncate">💡 ${item.vietnamese}</span>`;
+          card.classList.add('border-amber-400', 'ring-2', 'ring-amber-400/20', 'bg-amber-50/30', 'dark:bg-amber-950/10');
           speakJapanese(item.japanese);
         }
-        renderContent();
-        if (window.lucide) lucide.createIcons();
       });
 
       const input = document.createElement('input');
       input.type = 'text';
       input.dataset.itemId = item.id;
-      input.value = userAnswer;
+      input.value = answer.vietnamese || '';
       input.placeholder = 'Gõ nghĩa tiếng Việt...';
       input.autocomplete = 'off';
       input.spellcheck = false;
@@ -618,11 +649,7 @@
 
       input.addEventListener('input', (e) => {
         const val = e.target.value;
-        if (typeof state.userAnswers[item.id] === 'object') {
-          state.userAnswers[item.id].vietnamese = val;
-        } else {
-          state.userAnswers[item.id] = val;
-        }
+        answer.vietnamese = val;
 
         if (state.evalMode === 'test' && !state.isTimerRunning) startTimer();
 
@@ -654,6 +681,12 @@
     container.appendChild(grid);
   }
 
+  // --- SMART MATCHING HELPERS ---
+  function removeAccents(str) {
+    if (!str) return '';
+    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'd').toLowerCase().trim();
+  }
+
   function cleanVietnamesePhrase(str) {
     return removeAccents(str)
       .replace(/[\(\)\[\]\{\}\.,;\/\-–~_]/g, ' ')
@@ -665,15 +698,12 @@
     const raw = item.vietnamese || '';
     const options = new Set();
 
-    // Split by comma, semicolon, slash, or parentheses
     const phrases = raw.split(/[,;\/\(\)]+/).map(s => cleanVietnamesePhrase(s)).filter(s => s.length > 0);
     phrases.forEach(p => options.add(p));
 
-    // Full phrase as well
     const fullClean = cleanVietnamesePhrase(raw);
     if (fullClean) options.add(fullClean);
 
-    // Hints
     if (item.hints) {
       item.hints.forEach(h => {
         const cleanH = cleanVietnamesePhrase(h);
@@ -693,6 +723,25 @@
     return validOptions.some(opt => opt === userClean);
   }
 
+  function isKanaInputCorrect(inputVal, item) {
+    if (!inputVal) return false;
+    const clean = inputVal.toLowerCase().trim();
+    const cleanRomaji = item.romaji.toLowerCase().replace(/[~～\[\]]/g, '').trim();
+    const cleanKana = item.kana.replace(/[~～\[\]]/g, '').trim();
+
+    if (clean === cleanRomaji || clean === cleanKana) return true;
+    if (window.JapaneseIME && window.JapaneseIME.toHiragana(clean) === cleanKana) return true;
+    if (item.hints && item.hints.some(h => clean === h.toLowerCase().trim())) return true;
+    return false;
+  }
+
+  function isKanjiInputCorrect(inputVal, item) {
+    if (!inputVal) return false;
+    const clean = inputVal.trim();
+    const targetKanji = item.kanji.replace(/[~～\[\]\(\)]/g, '').trim();
+    return clean === targetKanji || clean === item.kanji.trim() || clean === item.japanese.trim();
+  }
+
   function focusNextInput(currentId, type = 'kana') {
     const inputs = Array.from(document.querySelectorAll(`input[data-item-id]`));
     const currentInput = inputs.find(inp => parseInt(inp.dataset.itemId) === currentId && inp.dataset.type === type) || inputs.find(inp => parseInt(inp.dataset.itemId) === currentId);
@@ -709,10 +758,10 @@
     let correct = 0;
 
     state.items.forEach(item => {
-      const val = state.userAnswers[item.id];
+      const val = getAnswer(item.id);
       if (state.currentTab === 'type-japanese') {
-        const kana = val?.kana || '';
-        const kanji = val?.kanji || '';
+        const kana = val.kana || '';
+        const kanji = val.kanji || '';
         const hasKanji = item.kanji && item.kanji !== item.kana && !item.kanji.startsWith('～');
         if (kana.length > 0) {
           completed++;
@@ -720,7 +769,7 @@
           if (isOk) correct++;
         }
       } else if (state.currentTab === 'type-vietnamese') {
-        const vn = typeof val === 'string' ? val : val?.vietnamese || '';
+        const vn = val.vietnamese || '';
         if (vn.length > 0) {
           completed++;
           if (isVietnameseCorrect(vn, item)) correct++;
@@ -755,18 +804,18 @@
     const mistakes = [];
 
     state.items.forEach(item => {
-      const val = state.userAnswers[item.id];
+      const val = getAnswer(item.id);
       let isOk = false;
       let userDisplay = '';
 
       if (state.currentTab === 'type-japanese') {
-        const kana = val?.kana || '';
-        const kanji = val?.kanji || '';
+        const kana = val.kana || '';
+        const kanji = val.kanji || '';
         const hasKanji = item.kanji && item.kanji !== item.kana && !item.kanji.startsWith('～');
         isOk = isKanaInputCorrect(kana, item) && (!hasKanji || isKanjiInputCorrect(kanji, item));
         userDisplay = hasKanji ? `${kana} / ${kanji || '(Trống)'}` : kana;
       } else {
-        const vn = typeof val === 'string' ? val : val?.vietnamese || '';
+        const vn = val.vietnamese || '';
         isOk = isVietnameseCorrect(vn, item);
         userDisplay = vn;
       }
