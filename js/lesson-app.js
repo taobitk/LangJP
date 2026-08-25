@@ -438,7 +438,7 @@
       inputKana.dataset.itemId = item.id;
       inputKana.dataset.type = 'kana';
       inputKana.value = answer.kana || '';
-      inputKana.placeholder = `vd: ${item.romaji.replace(/~/g, '')}...`;
+      inputKana.placeholder = 'Gõ cách đọc Kana / Romaji...';
       inputKana.autocomplete = 'off';
       inputKana.autocapitalize = 'off';
       inputKana.spellcheck = false;
@@ -520,7 +520,7 @@
         inputKanji.dataset.itemId = item.id;
         inputKanji.dataset.type = 'kanji';
         inputKanji.value = answer.kanji || '';
-        inputKanji.placeholder = `Chuyển đổi: ${item.kanji}`;
+        inputKanji.placeholder = 'Chuyển đổi chữ Hán...';
         inputKanji.autocomplete = 'off';
         inputKanji.spellcheck = false;
         inputKanji.className = `w-full font-jp font-bold text-xs sm:text-sm bg-slate-50 dark:bg-slate-800/80 border ${isKanjiOk ? 'border-emerald-400 text-emerald-700 dark:text-emerald-300' : 'border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white'} rounded-xl py-1.5 px-3 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20`;
@@ -551,7 +551,7 @@
         const convertBtn = document.createElement('button');
         convertBtn.type = 'button';
         convertBtn.className = 'text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold hover:underline flex items-center gap-1 mt-0.5';
-        convertBtn.innerHTML = `<span>✨ Bấm để chuyển sang "${item.kanji}"</span>`;
+        convertBtn.innerHTML = `<span>✨ Tự chuyển sang chữ Hán (Kanji)</span>`;
         convertBtn.addEventListener('click', (e) => {
           e.stopPropagation();
           answer.kanji = item.kanji;
