@@ -655,12 +655,14 @@
 
         if (state.evalMode === 'zen') {
           if (isVietnameseCorrect(val, item)) {
-            input.classList.remove('border-slate-200', 'dark:border-slate-700', 'text-slate-900', 'dark:text-white');
+            input.classList.remove('border-slate-200', 'dark:border-slate-700', 'text-slate-900', 'dark:text-white', 'border-rose-400');
             input.classList.add('border-emerald-400', 'text-emerald-700', 'dark:text-emerald-300');
-            card.classList.remove('border-slate-200/80', 'dark:border-slate-800');
+            card.classList.remove('border-slate-200/80', 'dark:border-slate-800', 'border-rose-400');
             card.classList.add('border-emerald-500', 'ring-2', 'ring-emerald-500/20', 'bg-emerald-50/40', 'dark:bg-emerald-950/20');
-            speakJapanese(item.japanese);
-            focusNextInput(item.id, 'vietnamese');
+          } else {
+            input.classList.remove('border-emerald-400', 'text-emerald-700', 'dark:text-emerald-300');
+            input.classList.add('border-slate-200', 'dark:border-slate-700', 'text-slate-900', 'dark:text-white');
+            card.classList.remove('border-emerald-500', 'ring-2', 'ring-emerald-500/20', 'bg-emerald-50/40', 'dark:bg-emerald-950/20');
           }
         }
         updateStats();
@@ -669,6 +671,10 @@
       input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === 'Tab') {
           e.preventDefault();
+          const val = input.value;
+          if (isVietnameseCorrect(val, item)) {
+            speakJapanese(item.japanese);
+          }
           focusNextInput(item.id, 'vietnamese');
         }
       });
