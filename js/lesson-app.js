@@ -436,25 +436,39 @@
       // Real-time Auto-IME Conversion for Kana
       inputKana.addEventListener('input', (e) => {
         if (state.autoImeEnabled && window.JapaneseIME) {
-          const converted = window.JapaneseIME.toHiragana(e.target.value);
+          const isKatakanaWord = /[\u30A0-\u30FF]/.test(item.kana || item.japanese);
+          let converted = window.JapaneseIME.toHiragana(inputKana.value);
+          if (isKatakanaWord) {
+            converted = window.JapaneseIME.toKatakana(converted);
+          }
           inputKana.value = converted;
         }
         answer.kana = inputKana.value.trim();
 
         if (state.evalMode === 'test' && !state.isTimerRunning) startTimer();
 
-        // If Kana is correct, auto-suggest or convert Kanji!
-        if (isKanaInputCorrect(answer.kana, item)) {
+        const okKana = isKanaInputCorrect(answer.kana, item);
+        if (okKana) {
+          inputKana.classList.remove('border-slate-200', 'dark:border-slate-700', 'text-slate-900', 'dark:text-white');
+          inputKana.classList.add('border-emerald-400', 'text-emerald-700', 'dark:text-emerald-300');
+
           if (!hasKanji) {
             // No kanji needed, complete item!
+            card.classList.remove('border-slate-200/80', 'dark:border-slate-800');
+            card.classList.add('border-emerald-500', 'ring-2', 'ring-emerald-500/20', 'bg-emerald-50/40', 'dark:bg-emerald-950/20');
             speakJapanese(item.japanese);
             focusNextInput(item.id, 'kana');
           } else {
             // Auto fill Kanji or suggest to next box
             if (!answer.kanji) {
               answer.kanji = item.kanji;
-              if (inputKanji) inputKanji.value = item.kanji;
+              if (inputKanji) {
+                inputKanji.value = item.kanji;
+                inputKanji.classList.add('border-emerald-400', 'text-emerald-700', 'dark:text-emerald-300');
+              }
             }
+            card.classList.remove('border-slate-200/80', 'dark:border-slate-800');
+            card.classList.add('border-emerald-500', 'ring-2', 'ring-emerald-500/20', 'bg-emerald-50/40', 'dark:bg-emerald-950/20');
             speakJapanese(item.japanese);
             if (inputKanji) inputKanji.focus();
           }
