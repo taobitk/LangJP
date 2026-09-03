@@ -86,6 +86,12 @@
     .dark .custom-scrollbar::-webkit-scrollbar-thumb {
       background: #334155;
     }
+    /* Ngăn ngừa Safari trên iPhone tự động phóng to màn hình khi bấm ô gõ */
+    @media screen and (max-width: 768px) {
+      input[type="text"] {
+        font-size: 16px !important;
+      }
+    }
   </style>
 </head>
 

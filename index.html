@@ -115,6 +115,13 @@
       background-size: 32px 32px;
       background-position: 0 0, 16px 16px;
     }
+
+    /* Ngăn ngừa Safari trên iPhone tự động phóng to màn hình khi bấm ô gõ */
+    @media screen and (max-width: 768px) {
+      input[type="text"] {
+        font-size: 16px !important;
+      }
+    }
   </style>
 </head>
 
