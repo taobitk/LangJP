@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Zen+Maru+Gothic:wght@500;700;900&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=M+PLUS+Rounded+1c:wght@500;700;800;900&family=Noto+Sans+JP:wght@500;700;900&family=JetBrains+Mono:wght@500;700&display=swap"
     rel="stylesheet">
 
   <!-- Tailwind CSS CDN -->
@@ -31,8 +31,9 @@
       theme: {
         extend: {
           fontFamily: {
-            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
-            jp: ['"Zen Maru Gothic"', '"Noto Sans JP"', 'sans-serif'],
+            sans: ['"Be Vietnam Pro"', 'sans-serif'],
+            jp: ['"M PLUS Rounded 1c"', '"Noto Sans JP"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
           },
           colors: {
             sakura: {
@@ -206,19 +207,23 @@
   <main class="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-3 sm:py-6 space-y-3 sm:space-y-6">
 
     <!-- KANA SYSTEM SELECTOR: HIRAGANA vs KATAKANA -->
-    <section class="bg-white dark:bg-slate-900 rounded-2xl p-1.5 sm:p-2 shadow-sm border border-slate-200/80 dark:border-slate-800">
+    <section
+      class="bg-white dark:bg-slate-900 rounded-2xl p-1.5 sm:p-2 shadow-sm border border-slate-200/80 dark:border-slate-800">
       <div class="grid grid-cols-2 gap-1.5 sm:gap-2">
         <button id="btn-kana-hiragana"
           class="py-2 sm:py-2.5 px-3 rounded-xl text-center flex items-center justify-center gap-2 sm:gap-3 transition-all border-2 border-sakura-500 bg-sakura-50/70 dark:bg-sakura-950/30 text-sakura-700 dark:text-sakura-300 font-bold shadow-sm">
-          <span class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-sakura-500 text-white flex items-center justify-center font-jp font-bold text-sm sm:text-base shrink-0 shadow-sm">あ</span>
+          <span
+            class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-sakura-500 text-white flex items-center justify-center font-jp font-bold text-sm sm:text-base shrink-0 shadow-sm">あ</span>
           <div class="text-left">
             <div class="text-xs sm:text-sm font-bold leading-tight">Hiragana</div>
-            <div class="text-[10px] text-sakura-600 dark:text-sakura-400 font-medium hidden xs:block">Chữ Mềm (46 chữ)</div>
+            <div class="text-[10px] text-sakura-600 dark:text-sakura-400 font-medium hidden xs:block">Chữ Mềm (46 chữ)
+            </div>
           </div>
         </button>
         <button id="btn-kana-katakana"
           class="py-2 sm:py-2.5 px-3 rounded-xl text-center flex items-center justify-center gap-2 sm:gap-3 transition-all border-2 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400 font-bold">
-          <span class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center font-jp font-bold text-sm sm:text-base shrink-0">ア</span>
+          <span
+            class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center font-jp font-bold text-sm sm:text-base shrink-0">ア</span>
           <div class="text-left">
             <div class="text-xs sm:text-sm font-bold leading-tight">Katakana</div>
             <div class="text-[10px] text-slate-400 font-medium hidden xs:block">Chữ Cứng (46 chữ)</div>

@@ -5,7 +5,7 @@
  * - Immediate SkipWaiting & ClientsClaim -> Hot-updates across all active tabs
  */
 
-const CACHE_NAME = 'langjp-pwa-v20';
+const CACHE_NAME = 'langjp-pwa-v21';
 
 // Core local files pre-cached for 100% offline capability
 const PRECACHE_CORE = [
@@ -24,7 +24,7 @@ const PRECACHE_CORE = [
 const PRECACHE_EXTERNAL = [
   'https://cdn.tailwindcss.com',
   'https://unpkg.com/lucide@latest',
-  'https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Zen+Maru+Gothic:wght@500;700;900&display=swap'
+  'https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=M+PLUS+Rounded+1c:wght@500;700;800;900&family=Noto+Sans+JP:wght@500;700;900&family=JetBrains+Mono:wght@500;700&display=swap'
 ];
 
 // Install: Pre-cache resiliently and take over immediately
