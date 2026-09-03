@@ -5,7 +5,7 @@
  * - Immediate SkipWaiting & ClientsClaim -> Hot-updates across all active tabs
  */
 
-const CACHE_NAME = 'langjp-pwa-v19';
+const CACHE_NAME = 'langjp-pwa-v20';
 
 // Core local files pre-cached for 100% offline capability
 const PRECACHE_CORE = [

@@ -1,5 +1,5 @@
 /**
- * Hiragana Matrix Application Logic
+ * Kana Syllabary Matrix Application Logic (Hiragana & Katakana)
  * Manages Scope Filtering, Matrix Rendering, Keyboard Navigation, Auto-Advance, and Evaluation
  */
 
@@ -8,7 +8,8 @@
 
   // --- STATE ---
   const state = {
-    selectedCategory: 'all', // 'all', 'basic', 'dakuten', 'yoon'
+    kanaType: 'hiragana',     // 'hiragana' or 'katakana'
+    selectedCategory: 'all',  // 'all', 'basic', 'dakuten', 'yoon'
     selectedRows: new Set(),  // Set of selected row ids (e.g. 'a', 'ka', 'sa'...)
     currentTab: 'fill-romaji', // 'study', 'fill-romaji', 'fill-hiragana'
     evalMode: 'zen',          // 'zen' (instant check) or 'test' (check on submit)
@@ -25,14 +26,31 @@
     startTime: null,
   };
 
+  // Helper to get active Kana dataset
+  function getCurrentData() {
+    return state.kanaType === 'katakana' ? window.KATAKANA_DATA : window.HIRAGANA_DATA;
+  }
+
   // --- INITIALIZATION ---
   function init() {
+    // Load saved kana type
+    const savedType = localStorage.getItem('langjp_kana_type');
+    if (savedType === 'katakana') {
+      state.kanaType = 'katakana';
+    }
+
     // Default selection: All rows in Basic
-    HIRAGANA_DATA.basic.rows.forEach(r => state.selectedRows.add(r.id));
+    const data = getCurrentData();
+    if (data && data.basic) {
+      data.basic.rows.forEach(r => state.selectedRows.add(r.id));
+    }
 
     initTheme();
     initSound();
+    initKanaAudioMap();
+    renderKanaTypeSwitcherUI();
     renderFilterCategories();
+    bindKanaSwitcher();
     bindHeaderEvents();
     bindModeTabs();
     bindFilterButtons();
@@ -52,45 +70,68 @@
       document.documentElement.classList.remove('dark');
     }
 
-    document.getElementById('btn-theme-toggle').addEventListener('click', () => {
-      document.documentElement.classList.toggle('dark');
-      const isDark = document.documentElement.classList.contains('dark');
-      localStorage.setItem('hiragana_theme', isDark ? 'dark' : 'light');
-      lucide.createIcons();
-    });
+    const btnTheme = document.getElementById('btn-theme-toggle');
+    if (btnTheme) {
+      btnTheme.addEventListener('click', () => {
+        document.documentElement.classList.toggle('dark');
+        const isDark = document.documentElement.classList.contains('dark');
+        localStorage.setItem('hiragana_theme', isDark ? 'dark' : 'light');
+        if (window.lucide) lucide.createIcons();
+      });
+    }
   }
 
-  // --- AUDIO ENGINE (Local MP3 Audio + Web Speech API Fallback) ---
+  // --- AUDIO ENGINE ---
   let currentAudio = null;
+  const KANA_AUDIO_MAP = {};
 
-  const KANA_AUDIO_MAP = {
-    "あ": "a", "い": "i", "う": "u", "え": "e", "お": "o",
-    "か": "ka", "き": "ki", "く": "ku", "け": "ke", "こ": "ko",
-    "さ": "sa", "し": "shi", "す": "su", "せ": "se", "そ": "so",
-    "た": "ta", "ち": "chi", "つ": "tsu", "て": "te", "to": "to",
-    "な": "na", "に": "ni", "ぬ": "nu", "ね": "ne", "の": "no",
-    "は": "ha", "ひ": "hi", "ふ": "fu", "へ": "he", "ほ": "ho",
-    "ま": "ma", "み": "mi", "む": "mu", "め": "me", "も": "mo",
-    "や": "ya", "ゆ": "yu", "よ": "yo",
-    "ら": "ra", "り": "ri", "る": "ru", "れ": "re", "ろ": "ro",
-    "わ": "wa", "を": "wo", "ん": "n",
-    "が": "ga", "ぎ": "gi", "ぐ": "gu", "げ": "ge", "ご": "go",
-    "ざ": "za", "じ": "ji", "ず": "zu", "ぜ": "ze", "ぞ": "zo",
-    "だ": "da", "ぢ": "dji", "づ": "dzu", "で": "de", "ど": "do",
-    "ば": "ba", "び": "bi", "ぶ": "bu", "べ": "be", "ぼ": "bo",
-    "ぱ": "pa", "ぴ": "pi", "ぷ": "pu", "ぺ": "pe", "ぽ": "po",
-    "きゃ": "kya", "きゅ": "kyu", "きょ": "kyo",
-    "しゃ": "sha", "しゅ": "shu", "しょ": "sho",
-    "ちゃ": "cha", "ちゅ": "chu", "ちょ": "cho",
-    "にゃ": "nya", "にゅ": "nyu", "にょ": "nyo",
-    "ひゃ": "hya", "ひゅ": "hyu", "ひょ": "hyo",
-    "みゃ": "mya", "みゅ": "myu", "みょ": "myo",
-    "りゃ": "rya", "りゅ": "ryu", "りょ": "ryo",
-    "ぎゃ": "gya", "ぎゅ": "gyu", "ぎょ": "gyo",
-    "じゃ": "ja", "じゅ": "ju", "じょ": "jo",
-    "びゃ": "bya", "びゅ": "byu", "びょ": "byo",
-    "ぴゃ": "pya", "ぴゅ": "pyu", "ぴょ": "pyo"
-  };
+  function initKanaAudioMap() {
+    // Base Hiragana Audio Map
+    const baseMap = {
+      "あ": "a", "い": "i", "う": "u", "え": "e", "お": "o",
+      "か": "ka", "き": "ki", "く": "ku", "け": "ke", "こ": "ko",
+      "さ": "sa", "し": "shi", "す": "su", "せ": "se", "そ": "so",
+      "た": "ta", "ち": "chi", "つ": "tsu", "て": "te", "と": "to",
+      "な": "na", "に": "ni", "ぬ": "nu", "ね": "ne", "の": "no",
+      "は": "ha", "ひ": "hi", "ふ": "fu", "へ": "he", "ほ": "ho",
+      "ま": "ma", "み": "mi", "む": "mu", "め": "me", "も": "mo",
+      "や": "ya", "ゆ": "yu", "よ": "yo",
+      "ら": "ra", "り": "ri", "る": "ru", "れ": "re", "ろ": "ro",
+      "わ": "wa", "を": "wo", "ん": "n",
+      "が": "ga", "ぎ": "gi", "ぐ": "gu", "げ": "ge", "ご": "go",
+      "ざ": "za", "じ": "ji", "ず": "zu", "ぜ": "ze", "ぞ": "zo",
+      "だ": "da", "ぢ": "dji", "づ": "dzu", "で": "de", "ど": "do",
+      "ば": "ba", "び": "bi", "ぶ": "bu", "べ": "be", "ぼ": "bo",
+      "ぱ": "pa", "ぴ": "pi", "ぷ": "pu", "ぺ": "pe", "ぽ": "po",
+      "きゃ": "kya", "きゅ": "kyu", "きょ": "kyo",
+      "しゃ": "sha", "しゅ": "shu", "しょ": "sho",
+      "ちゃ": "cha", "ちゅ": "chu", "ちょ": "cho",
+      "にゃ": "nya", "にゅ": "nyu", "にょ": "nyo",
+      "ひゃ": "hya", "ひゅ": "hyu", "ひょ": "hyo",
+      "みゃ": "mya", "みゅ": "myu", "みょ": "myo",
+      "りゃ": "rya", "りゅ": "ryu", "りょ": "ryo",
+      "ぎゃ": "gya", "ぎゅ": "gyu", "ぎょ": "gyo",
+      "じゃ": "ja", "じゅ": "ju", "じょ": "jo",
+      "びゃ": "bya", "びゅ": "byu", "びょ": "byo",
+      "ぴゃ": "pya", "ぴゅ": "pyu", "ぴょ": "pyo"
+    };
+
+    Object.assign(KANA_AUDIO_MAP, baseMap);
+
+    // Populate all Katakana sounds automatically from KATAKANA_DATA
+    if (window.KATAKANA_DATA) {
+      Object.values(window.KATAKANA_DATA).forEach(cat => {
+        cat.rows.forEach(r => {
+          r.items.forEach(it => {
+            if (it.kana) {
+              const audioFile = it.romaji.toLowerCase().replace(/[^a-z]/g, '');
+              KANA_AUDIO_MAP[it.kana] = baseMap[window.JapaneseIME ? window.JapaneseIME.toHiragana(it.kana) : ''] || audioFile;
+            }
+          });
+        });
+      });
+    }
+  }
 
   function initSound() {
     const savedSound = localStorage.getItem('hiragana_sound');
@@ -163,12 +204,62 @@
     } catch (err) { }
   }
 
+  // --- KANA TYPE SWITCHER (HIRAGANA vs KATAKANA) ---
+  function bindKanaSwitcher() {
+    const btnHira = document.getElementById('btn-kana-hiragana');
+    const btnKata = document.getElementById('btn-kana-katakana');
+
+    if (btnHira) {
+      btnHira.addEventListener('click', () => switchKanaType('hiragana'));
+    }
+    if (btnKata) {
+      btnKata.addEventListener('click', () => switchKanaType('katakana'));
+    }
+  }
+
+  function switchKanaType(type) {
+    if (state.kanaType === type) return;
+    state.kanaType = type;
+    localStorage.setItem('langjp_kana_type', type);
+
+    // Reset selected rows to all Basic rows of current dataset
+    state.selectedRows.clear();
+    const data = getCurrentData();
+    if (data && data.basic) {
+      data.basic.rows.forEach(r => state.selectedRows.add(r.id));
+    }
+
+    renderKanaTypeSwitcherUI();
+    resetBoardState();
+    refreshAll();
+  }
+
+  function renderKanaTypeSwitcherUI() {
+    const isHira = state.kanaType === 'hiragana';
+    const btnHira = document.getElementById('btn-kana-hiragana');
+    const btnKata = document.getElementById('btn-kana-katakana');
+
+    if (btnHira && btnKata) {
+      if (isHira) {
+        btnHira.className = 'py-2 sm:py-2.5 px-3 rounded-xl text-center flex items-center justify-center gap-2 sm:gap-3 transition-all border-2 border-sakura-500 bg-sakura-50/70 dark:bg-sakura-950/30 text-sakura-700 dark:text-sakura-300 font-bold shadow-sm';
+        btnKata.className = 'py-2 sm:py-2.5 px-3 rounded-xl text-center flex items-center justify-center gap-2 sm:gap-3 transition-all border-2 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400 font-bold';
+      } else {
+        btnKata.className = 'py-2 sm:py-2.5 px-3 rounded-xl text-center flex items-center justify-center gap-2 sm:gap-3 transition-all border-2 border-indigo-500 bg-indigo-50/70 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300 font-bold shadow-sm';
+        btnHira.className = 'py-2 sm:py-2.5 px-3 rounded-xl text-center flex items-center justify-center gap-2 sm:gap-3 transition-all border-2 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400 font-bold';
+      }
+    }
+  }
+
   // --- FILTER UI ---
   function renderFilterCategories() {
     const container = document.getElementById('filter-categories-container');
+    if (!container) return;
     container.innerHTML = '';
 
-    Object.values(HIRAGANA_DATA).forEach(cat => {
+    const data = getCurrentData();
+    if (!data) return;
+
+    Object.values(data).forEach(cat => {
       const catBox = document.createElement('div');
       catBox.className = 'space-y-2';
 
@@ -177,6 +268,8 @@
 
       const allRowsInCatSelected = cat.rows.every(r => state.selectedRows.has(r.id));
       const someRowsSelected = cat.rows.some(r => state.selectedRows.has(r.id));
+
+      const accentColor = state.kanaType === 'katakana' ? 'indigo' : 'sakura';
 
       catHeader.innerHTML = `
         <div class="flex items-center gap-2">
@@ -241,7 +334,6 @@
   function toggleCategoryRows(cat) {
     const allSelected = cat.rows.every(r => state.selectedRows.has(r.id));
     if (allSelected) {
-      // Unselect only if there will be at least 1 row remaining overall
       const countRemaining = Array.from(state.selectedRows).filter(id => !cat.rows.some(r => r.id === id)).length;
       if (countRemaining > 0) {
         cat.rows.forEach(r => state.selectedRows.delete(r.id));
@@ -254,7 +346,8 @@
 
   function bindFilterButtons() {
     document.getElementById('btn-select-all').addEventListener('click', () => {
-      Object.values(HIRAGANA_DATA).forEach(cat => {
+      const data = getCurrentData();
+      Object.values(data).forEach(cat => {
         cat.rows.forEach(r => state.selectedRows.add(r.id));
       });
       refreshAll();
@@ -262,14 +355,15 @@
 
     document.getElementById('btn-select-basic').addEventListener('click', () => {
       state.selectedRows.clear();
-      HIRAGANA_DATA.basic.rows.forEach(r => state.selectedRows.add(r.id));
+      const data = getCurrentData();
+      data.basic.rows.forEach(r => state.selectedRows.add(r.id));
       refreshAll();
     });
 
     document.getElementById('btn-select-none').addEventListener('click', () => {
-      // Leave at least the first row
       state.selectedRows.clear();
-      state.selectedRows.add(HIRAGANA_DATA.basic.rows[0].id);
+      const data = getCurrentData();
+      state.selectedRows.add(data.basic.rows[0].id);
       refreshAll();
     });
   }
@@ -310,7 +404,7 @@
           renderPalette();
         }
         updateStats();
-        lucide.createIcons();
+        if (window.lucide) lucide.createIcons();
       });
     });
   }
@@ -334,7 +428,7 @@
       renderMatrix();
       if (state.currentTab === 'fill-hiragana') renderPalette();
       updateStats();
-      lucide.createIcons();
+      if (window.lucide) lucide.createIcons();
     });
 
     btnTest.addEventListener('click', () => {
@@ -352,19 +446,18 @@
       renderMatrix();
       if (state.currentTab === 'fill-hiragana') renderPalette();
       updateStats();
-      lucide.createIcons();
+      if (window.lucide) lucide.createIcons();
     });
   }
 
   function bindActionButtons() {
-    // Shuffle Board Button
     const btnShuffleBoard = document.getElementById('btn-toggle-shuffle');
     const shuffleBtnText = document.getElementById('shuffle-btn-text');
 
     if (btnShuffleBoard) {
       btnShuffleBoard.addEventListener('click', () => {
         state.isShuffled = !state.isShuffled;
-        state.shuffledItems = null; // Tạo thứ tự xáo trộn mới
+        state.shuffledItems = null;
 
         if (state.isShuffled) {
           btnShuffleBoard.className = 'text-[11px] sm:text-xs font-bold px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-indigo-600 text-white border border-indigo-600 shadow-md shadow-indigo-600/30 flex items-center gap-1.5 transition-all';
@@ -381,14 +474,14 @@
         renderMatrix();
         if (state.currentTab === 'fill-hiragana') renderPalette();
         updateStats();
-        lucide.createIcons();
+        if (window.lucide) lucide.createIcons();
       });
     }
 
     document.getElementById('btn-reset-board').addEventListener('click', () => {
       resetBoardState();
       if (state.isShuffled) {
-        state.shuffledItems = null; // Xáo trộn mới khi bấm làm lại
+        state.shuffledItems = null;
       }
       if (state.evalMode === 'test' && state.currentTab !== 'study') {
         startTimer();
@@ -396,7 +489,7 @@
       renderMatrix();
       if (state.currentTab === 'fill-hiragana') renderPalette();
       updateStats();
-      lucide.createIcons();
+      if (window.lucide) lucide.createIcons();
     });
 
     document.getElementById('btn-submit-test').addEventListener('click', () => {
@@ -419,7 +512,7 @@
       document.getElementById('results-modal').classList.remove('flex');
       resetBoardState();
       if (state.isShuffled) {
-        state.shuffledItems = null; // Xáo trộn mới cho ván mới
+        state.shuffledItems = null;
       }
       if (state.evalMode === 'test' && state.currentTab !== 'study') {
         startTimer();
@@ -427,7 +520,7 @@
       renderMatrix();
       if (state.currentTab === 'fill-hiragana') renderPalette();
       updateStats();
-      lucide.createIcons();
+      if (window.lucide) lucide.createIcons();
     });
   }
 
@@ -461,7 +554,10 @@
   // --- MATRIX DATA HELPERS ---
   function getSelectedRowsData() {
     const rows = [];
-    Object.values(HIRAGANA_DATA).forEach(cat => {
+    const data = getCurrentData();
+    if (!data) return rows;
+
+    Object.values(data).forEach(cat => {
       cat.rows.forEach(r => {
         if (state.selectedRows.has(r.id)) {
           rows.push({
@@ -509,7 +605,7 @@
       renderPalette();
     }
     updateStats();
-    lucide.createIcons();
+    if (window.lucide) lucide.createIcons();
   }
 
   // --- RENDER MATRIX BOARD ---
@@ -528,7 +624,6 @@
       const groupSection = document.createElement('section');
       groupSection.className = 'space-y-3 animate-fade-in';
 
-      // Section Header
       const header = document.createElement('div');
       header.className = 'flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-1.5';
       header.innerHTML = `
@@ -543,7 +638,6 @@
       `;
       groupSection.appendChild(header);
 
-      // Chunk shuffled items into rows of 5
       const rowsList = document.createElement('div');
       rowsList.className = 'space-y-2.5';
 
@@ -579,7 +673,6 @@
           cellsGrid.appendChild(cellEl);
         });
 
-        // Fill remaining spaces in the last row if < 5 items
         if (chunk.length < 5) {
           for (let fill = 0; fill < 5 - chunk.length; fill++) {
             const emptyCell = document.createElement('div');
@@ -609,7 +702,6 @@
     // --- CHẾ ĐỘ THƯỜNG (THEO NHÓM BẢNG CHỮ CÁI) ---
     const selectedRows = getSelectedRowsData();
 
-    // Group rows by category
     const categoriesMap = new Map();
     selectedRows.forEach(row => {
       if (!categoriesMap.has(row.categoryId)) {
@@ -625,7 +717,6 @@
       const groupSection = document.createElement('section');
       groupSection.className = 'space-y-3 animate-fade-in';
 
-      // Section Header
       const header = document.createElement('div');
       header.className = 'flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-1.5';
       header.innerHTML = `
@@ -637,7 +728,6 @@
       `;
       groupSection.appendChild(header);
 
-      // Rows Grid Container
       const rowsList = document.createElement('div');
       rowsList.className = 'space-y-2.5';
 
@@ -645,7 +735,6 @@
         const rowEl = document.createElement('div');
         rowEl.className = 'bg-white dark:bg-slate-900/90 rounded-2xl p-2 sm:p-4 shadow-sm border border-slate-200/80 dark:border-slate-800 flex flex-row items-center gap-2 sm:gap-4';
 
-        // Row Label (Chỉ hiển thị gợi ý tên hàng ở Chế độ Xem & Ôn tập)
         if (state.currentTab === 'study') {
           const labelCol = document.createElement('div');
           labelCol.className = 'w-16 sm:w-36 shrink-0 flex flex-col items-start justify-center';
@@ -655,7 +744,6 @@
           `;
           rowEl.appendChild(labelCol);
         } else {
-          // Trong chế độ Luyện tập: Ẩn hoàn toàn tên hàng, chỉ hiện số thứ tự #1, #2
           const labelCol = document.createElement('div');
           labelCol.className = 'w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 text-[10px] sm:text-xs font-mono font-bold flex items-center justify-center shrink-0';
           labelCol.textContent = `#${rowIdx + 1}`;
@@ -663,7 +751,6 @@
           rowEl.appendChild(labelCol);
         }
 
-        // Cells Grid (5 columns for basic/dakuten, 3 columns for yoon)
         const isYoon = catId === 'yoon';
         const colsCount = isYoon ? 3 : 5;
 
@@ -676,7 +763,6 @@
           const cellKey = `${row.id}_${colIdx}`;
 
           if (!item.kana) {
-            // Empty placeholder for rows without 5 full letters (e.g. Ya, Wa)
             const emptyCell = document.createElement('div');
             emptyCell.className = 'h-16 sm:h-24 rounded-xl border border-dashed border-slate-200 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/40 flex items-center justify-center opacity-40';
             emptyCell.innerHTML = '<span class="text-xs text-slate-400 font-mono">-</span>';
@@ -684,7 +770,6 @@
             return;
           }
 
-          // Build cell based on active mode
           let cellEl;
           if (state.currentTab === 'study') {
             cellEl = createStudyCell(item);
@@ -705,7 +790,6 @@
       container.appendChild(groupSection);
     });
 
-    // Auto-select first empty slot if in Mode 3 and none active
     if (state.currentTab === 'fill-hiragana' && !state.activeSlotKey) {
       const firstItem = getAllValidItems().find(i => !state.userAnswers[i.key]);
       if (firstItem) {
@@ -734,7 +818,7 @@
     return card;
   }
 
-  // 2. Mode: Hiragana to Romaji Fill (Nhìn chữ Nhật ➔ Tự gõ Romaji, Click để Xem/Ẩn đáp án & Phát âm)
+  // 2. Mode: Kana to Romaji Fill
   function createRomajiFillCell(item, cellKey) {
     const card = document.createElement('div');
     const userAnswer = (state.userAnswers[cellKey] || '').toLowerCase().trim();
@@ -761,7 +845,6 @@
 
     card.className = `h-16 sm:h-24 rounded-xl border ${borderClass} ${bgClass} transition-all flex flex-col items-center justify-between p-1 sm:p-2 group focus-within:ring-2 focus-within:ring-sakura-500 focus-within:border-sakura-500 relative`;
 
-    // Top Area: Hiragana character with click-to-reveal hint toggle & pronunciation
     const topArea = document.createElement('div');
     topArea.className = 'w-full flex items-center justify-center gap-1 cursor-pointer select-none hover:scale-105 transition-transform';
     topArea.title = isHintRevealed ? 'Bấm để ẩn đáp án' : 'Bấm để xem đáp án & nghe phát âm';
@@ -778,10 +861,9 @@
       topArea.appendChild(hintTag);
     }
 
-    // Toggle hint on click (Cập nhật DOM cục bộ trên ô này & phát âm tiếng Nhật)
     topArea.addEventListener('click', (e) => {
       e.stopPropagation();
-      speakKana(item.kana); // Phát âm chuẩn tiếng Nhật
+      speakKana(item.kana);
 
       const isRevealed = state.revealedHints.has(cellKey);
       if (isRevealed) {
@@ -803,7 +885,6 @@
       }
     });
 
-    // Romaji Input
     const input = document.createElement('input');
     input.type = 'text';
     input.dataset.cellKey = cellKey;
@@ -816,22 +897,19 @@
     input.spellcheck = false;
     input.className = 'w-full text-center font-mono font-bold text-xs sm:text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md sm:rounded-lg py-0.5 sm:py-1 px-0.5 text-slate-900 dark:text-white focus:outline-none focus:border-sakura-500';
 
-    // Event: Input typing with smart Auto-Advance & sound reinforcement
     input.addEventListener('input', (e) => {
       const val = e.target.value.toLowerCase().trim();
       state.userAnswers[cellKey] = val;
 
-      // Start timer on first keystroke in test mode
       if (state.evalMode === 'test' && !state.isTimerRunning && state.currentTab !== 'study') {
         startTimer();
       }
 
-      // Check correctness in Zen Mode
       const nowCorrect = item.alternatives.includes(val);
       if (state.evalMode === 'zen') {
         if (nowCorrect) {
           card.className = `h-16 sm:h-24 rounded-xl border border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/40 dark:bg-emerald-950/20 transition-all flex flex-col items-center justify-between p-1 sm:p-2 animate-pop relative`;
-          speakKana(item.kana); // Đọc phát âm khi gõ đúng!
+          speakKana(item.kana);
           focusNextInput(cellKey);
         } else {
           card.className = `h-16 sm:h-24 rounded-xl border ${val.length > 0 ? 'border-rose-400 ring-2 ring-rose-400/20 bg-rose-50/40 dark:bg-rose-950/20' : 'border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/40'} transition-all flex flex-col items-center justify-between p-1 sm:p-2 relative`;
@@ -842,7 +920,6 @@
       checkAllCompletedZen();
     });
 
-    // Event: Arrow keys, Enter, Backspace navigation
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === 'Tab') {
         e.preventDefault();
@@ -862,7 +939,7 @@
     return card;
   }
 
-  // 3. Mode: Romaji to Hiragana Fill (Nhìn Romaji ➔ Chọn/Điền Chữ Nhật, Click để Xem/Ẩn đáp án & Phát âm)
+  // 3. Mode: Romaji to Kana Fill
   function createHiraganaFillCell(item, cellKey) {
     const card = document.createElement('div');
     const placedKana = state.userAnswers[cellKey];
@@ -892,7 +969,6 @@
     card.className = `h-16 sm:h-24 rounded-xl border ${borderClass} ${bgClass} transition-all flex flex-col items-center justify-between p-1 sm:p-2 cursor-pointer hover:border-indigo-400 relative group`;
     card.dataset.slotKey = cellKey;
 
-    // Romaji Hint Tag at Top (Clickable to reveal/hide answer in place & play pronunciation)
     const romajiTag = document.createElement('button');
     romajiTag.className = `font-mono text-[9px] sm:text-[11px] font-bold px-1.5 sm:px-2 py-0.2 sm:py-0.5 rounded transition-all flex items-center gap-1 ${isHintRevealed
       ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700'
@@ -904,10 +980,9 @@
       ${isHintRevealed ? `<span class="hint-tag font-jp text-[11px] text-amber-600 dark:text-amber-400 font-black animate-pop">💡${item.kana}</span>` : ''}
     `;
 
-    // Toggle hint in-place & play audio
     romajiTag.addEventListener('click', (e) => {
       e.stopPropagation();
-      speakKana(item.kana); // Phát âm chuẩn tiếng Nhật
+      speakKana(item.kana);
 
       const isRevealed = state.revealedHints.has(cellKey);
       if (isRevealed) {
@@ -931,7 +1006,6 @@
       }
     });
 
-    // Hiragana Slot / Placed Content
     const slotBody = document.createElement('div');
     slotBody.className = 'flex-1 flex items-center justify-center w-full';
 
@@ -940,7 +1014,6 @@
       kanaSpan.className = 'font-jp font-bold text-lg sm:text-3xl text-indigo-700 dark:text-indigo-300 animate-pop';
       kanaSpan.textContent = placedKana;
 
-      // Remove button on hover / touch
       const removeBtn = document.createElement('button');
       removeBtn.className = 'absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 flex items-center justify-center text-[10px] opacity-70 sm:opacity-0 group-hover:opacity-100 transition-opacity';
       removeBtn.innerHTML = '×';
@@ -967,7 +1040,6 @@
       card.appendChild(slotBody);
     }
 
-    // Click card to make it active slot & play sound
     card.addEventListener('click', () => {
       if (placedKana) {
         speakKana(placedKana);
@@ -994,23 +1066,21 @@
   // --- RENDER CHARACTER PALETTE (Mode 3) ---
   function renderPalette(shuffle = false) {
     const container = document.getElementById('palette-cards-container');
+    if (!container) return;
     container.innerHTML = '';
 
     const validItems = getAllValidItems();
 
-    // Count placed characters
     const placedCounts = {};
     Object.values(state.userAnswers).forEach(k => {
       placedCounts[k] = (placedCounts[k] || 0) + 1;
     });
 
-    // Create unique list of needed kana
     let kanaList = validItems.map(i => i.kana);
     if (shuffle) {
       kanaList.sort(() => Math.random() - 0.5);
     }
 
-    // Deduplicate for display while showing available quantity
     const uniqueKana = Array.from(new Set(kanaList));
 
     uniqueKana.forEach(kana => {
@@ -1044,11 +1114,8 @@
 
   function placeKanaIntoSlot(kana) {
     const validItems = getAllValidItems();
-
-    // Phát âm chữ cái khi chọn từ khay
     speakKana(kana);
 
-    // If activeSlotKey is invalid or already filled, find next empty slot
     let targetKey = state.activeSlotKey;
     if (!targetKey || state.userAnswers[targetKey]) {
       const firstEmpty = validItems.find(i => !state.userAnswers[i.key]);
@@ -1057,45 +1124,38 @@
       }
     }
 
-    if (!targetKey) return;
+    if (targetKey) {
+      state.userAnswers[targetKey] = kana;
 
-    // Start timer on first place in test mode
-    if (state.evalMode === 'test' && !state.isTimerRunning && state.currentTab !== 'study') {
-      startTimer();
+      const currentIndex = validItems.findIndex(i => i.key === targetKey);
+      const remainingItems = validItems.slice(currentIndex + 1).concat(validItems.slice(0, currentIndex));
+      const nextEmpty = remainingItems.find(i => !state.userAnswers[i.key]);
+
+      state.activeSlotKey = nextEmpty ? nextEmpty.key : null;
+
+      renderMatrix();
+      renderPalette();
+      updateStats();
+      checkAllCompletedZen();
     }
-
-    state.userAnswers[targetKey] = kana;
-
-    // Auto-advance to next empty slot
-    const nextEmpty = validItems.find(i => i.key !== targetKey && !state.userAnswers[i.key]);
-    state.activeSlotKey = nextEmpty ? nextEmpty.key : null;
-
-    renderMatrix();
-    renderPalette();
-    updateStats();
-    checkAllCompletedZen();
   }
 
   // --- KEYBOARD NAVIGATION HELPERS ---
-  function getOrderedInputs() {
-    return Array.from(document.querySelectorAll('input[data-cell-key]'));
-  }
-
   function focusNextInput(currentKey) {
-    const inputs = getOrderedInputs();
-    const currentIndex = inputs.findIndex(inp => inp.dataset.cellKey === currentKey);
-    if (currentIndex >= 0 && currentIndex < inputs.length - 1) {
-      inputs[currentIndex + 1].focus();
-      inputs[currentIndex + 1].select();
+    const inputs = Array.from(document.querySelectorAll('input[data-cell-key]'));
+    const currentIdx = inputs.findIndex(i => i.dataset.cellKey === currentKey);
+    if (currentIdx !== -1 && currentIdx < inputs.length - 1) {
+      inputs[currentIdx + 1].focus();
+      inputs[currentIdx + 1].select();
     }
   }
 
   function focusPrevInput(currentKey) {
-    const inputs = getOrderedInputs();
-    const currentIndex = inputs.findIndex(inp => inp.dataset.cellKey === currentKey);
-    if (currentIndex > 0) {
-      inputs[currentIndex - 1].focus();
-      inputs[currentIndex - 1].select();
+    const inputs = Array.from(document.querySelectorAll('input[data-cell-key]'));
+    const currentIdx = inputs.findIndex(i => i.dataset.cellKey === currentKey);
+    if (currentIdx > 0) {
+      inputs[currentIdx - 1].focus();
+      inputs[currentIdx - 1].select();
     }
   }
 
@@ -1103,143 +1163,117 @@
   function updateStats() {
     const validItems = getAllValidItems();
     const total = validItems.length;
+
     let filled = 0;
     let correct = 0;
 
     validItems.forEach(item => {
-      const ans = state.userAnswers[item.key];
-      if (ans && ans.length > 0) {
+      const userAns = state.userAnswers[item.key];
+      if (userAns !== undefined && userAns !== '') {
         filled++;
         if (state.currentTab === 'fill-romaji') {
-          if (item.alternatives.includes(ans.toLowerCase().trim())) {
+          if (item.alternatives.includes(userAns.toLowerCase().trim())) {
             correct++;
           }
-        } else if (state.currentTab === 'fill-hiragana') {
-          if (ans === item.kana) {
+        } else {
+          if (userAns === item.kana) {
             correct++;
           }
         }
       }
     });
 
-    const accuracy = filled > 0 ? Math.round((correct / filled) * 100) : 0;
     const progressPct = total > 0 ? Math.round((filled / total) * 100) : 0;
+    const accuracyPct = filled > 0 ? Math.round((correct / filled) * 100) : 0;
 
-    // Update UI elements
-    const statProgressText = document.getElementById('stat-progress-text');
-    const statProgressBar = document.getElementById('stat-progress-bar');
-    const statAccuracyText = document.getElementById('stat-accuracy-text');
-    const selectedCountBadge = document.getElementById('selected-count-badge');
+    const bar = document.getElementById('stat-progress-bar');
+    const txtProgress = document.getElementById('stat-progress-text');
+    const txtAccuracy = document.getElementById('stat-accuracy-text');
 
-    if (statProgressText) statProgressText.textContent = `${filled} / ${total}`;
-    if (statProgressBar) statProgressBar.style.width = `${progressPct}%`;
-    if (statAccuracyText) statAccuracyText.textContent = `${accuracy}%`;
-    if (selectedCountBadge) {
-      const rowCount = state.selectedRows.size;
-      selectedCountBadge.textContent = `Đang chọn: ${total} chữ (${rowCount} hàng)`;
-    }
+    if (bar) bar.style.width = `${progressPct}%`;
+    if (txtProgress) txtProgress.textContent = `${filled}/${total}`;
+    if (txtAccuracy) txtAccuracy.textContent = `${accuracyPct}%`;
+
+    const countBadge = document.getElementById('selected-count-badge');
+    if (countBadge) countBadge.textContent = `Đang chọn: ${total} chữ`;
   }
 
   function checkAllCompletedZen() {
     if (state.evalMode !== 'zen' || state.currentTab === 'study') return;
-
     const validItems = getAllValidItems();
-    const allFilled = validItems.every(i => {
-      const ans = state.userAnswers[i.key];
-      if (!ans) return false;
-      if (state.currentTab === 'fill-romaji') return i.alternatives.includes(ans.toLowerCase().trim());
-      if (state.currentTab === 'fill-hiragana') return ans === i.kana;
-      return false;
+    if (validItems.length === 0) return;
+
+    const allCorrect = validItems.every(item => {
+      const userAns = state.userAnswers[item.key];
+      if (!userAns) return false;
+      if (state.currentTab === 'fill-romaji') {
+        return item.alternatives.includes(userAns.toLowerCase().trim());
+      }
+      return userAns === item.kana;
     });
 
-    if (allFilled && validItems.length > 0) {
+    if (allCorrect) {
       setTimeout(() => {
         evaluateAllAnswers(false);
-      }, 350);
+      }, 400);
     }
   }
 
-  function evaluateAllAnswers(manualSubmit = true) {
+  function evaluateAllAnswers(showModal = true) {
     state.isSubmitted = true;
     stopTimer();
 
     const validItems = getAllValidItems();
     const total = validItems.length;
-    let correctCount = 0;
-    const mistakes = [];
+    let correct = 0;
 
     validItems.forEach(item => {
-      const userAns = state.userAnswers[item.key] || '';
-      let isCorrect = false;
-
-      if (state.currentTab === 'fill-romaji') {
-        isCorrect = item.alternatives.includes(userAns.toLowerCase().trim());
-      } else if (state.currentTab === 'fill-hiragana') {
-        isCorrect = userAns === item.kana;
-      }
-
-      if (isCorrect) {
-        correctCount++;
-      } else {
-        mistakes.push({
-          kana: item.kana,
-          romaji: item.romaji,
-          userAns: userAns || '(chưa điền)',
-          rowName: item.rowName
-        });
+      const userAns = state.userAnswers[item.key];
+      if (userAns) {
+        if (state.currentTab === 'fill-romaji') {
+          if (item.alternatives.includes(userAns.toLowerCase().trim())) correct++;
+        } else {
+          if (userAns === item.kana) correct++;
+        }
       }
     });
 
-    const accuracy = total > 0 ? Math.round((correctCount / total) * 100) : 0;
-    const timeTaken = document.getElementById('timer-display').textContent || '00:00';
+    const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
+    const mins = Math.floor(state.timerSeconds / 60);
+    const secs = state.timerSeconds % 60;
+    const timeStr = `${mins > 0 ? mins + 'm ' : ''}${secs}s`;
 
-    // Show Results in Modal
     const modal = document.getElementById('results-modal');
-    const modalAccuracy = document.getElementById('modal-accuracy');
-    const modalCorrectCount = document.getElementById('modal-correct-count');
-    const modalTimeTaken = document.getElementById('modal-time-taken');
-    const modalMistakesSection = document.getElementById('modal-mistakes-section');
-    const modalMistakesList = document.getElementById('modal-mistakes-list');
-    const modalMistakeCount = document.getElementById('modal-mistake-count');
+    if (!modal) return;
 
-    modalAccuracy.textContent = `${accuracy}%`;
-    modalCorrectCount.textContent = `${correctCount} / ${total}`;
-    modalTimeTaken.textContent = timeTaken;
+    document.getElementById('modal-score-accuracy').textContent = `${accuracy}%`;
+    document.getElementById('modal-score-count').textContent = `${correct}/${total}`;
+    document.getElementById('modal-score-time').textContent = timeStr;
 
-    if (mistakes.length === 0) {
-      modalMistakesSection.classList.add('hidden');
-      document.getElementById('modal-title').textContent = 'Xuất Sắc! Điểm Tuyệt Đối 🎉';
-      document.getElementById('modal-subtitle').textContent = 'Bạn đã ghi nhớ chính xác toàn bộ bảng chữ cái vừa chọn!';
+    const titleEl = document.getElementById('modal-title');
+    const msgEl = document.getElementById('modal-message');
+
+    if (accuracy === 100) {
+      titleEl.textContent = '🎉 Xuất Sắc! Hoàn Thành 100%';
+      msgEl.textContent = 'Bạn đã ghi nhớ hoàn hảo tất cả các chữ trong phạm vi vừa chọn!';
+    } else if (accuracy >= 80) {
+      titleEl.textContent = '👏 Rất Tốt!';
+      msgEl.textContent = `Bạn đạt ${accuracy}% độ chính xác. Hãy ôn lại những chữ chưa thuộc nhé!`;
     } else {
-      modalMistakesSection.classList.remove('hidden');
-      modalMistakeCount.textContent = `${mistakes.length} chữ`;
-      document.getElementById('modal-title').textContent = 'Hoàn Thành Bài Luyện Tập!';
-      document.getElementById('modal-subtitle').textContent = `Bạn đã đúng ${correctCount}/${total} câu. Hãy xem lại các chữ bị nhầm lẫn nhé!`;
-
-      modalMistakesList.innerHTML = '';
-      mistakes.forEach(m => {
-        const itemBox = document.createElement('div');
-        itemBox.className = 'flex items-center gap-2 bg-white dark:bg-slate-800 px-2.5 py-1.5 rounded-lg border border-rose-200 dark:border-rose-800 text-xs';
-        itemBox.innerHTML = `
-          <span class="font-jp font-bold text-base text-slate-800 dark:text-slate-100">${m.kana}</span>
-          <span class="font-mono text-emerald-600 dark:text-emerald-400 font-bold">${m.romaji}</span>
-          <span class="text-rose-500 line-through font-mono">(${m.userAns})</span>
-        `;
-        modalMistakesList.appendChild(itemBox);
-      });
+      titleEl.textContent = '💪 Cố Lên Nhé!';
+      msgEl.textContent = `Bạn đã hoàn thành bài tập với ${correct}/${total} chữ đúng. Luyện tập thêm để nhớ lâu hơn!`;
     }
 
     modal.classList.remove('hidden');
     modal.classList.add('flex');
 
-    // Re-render matrix with full evaluation feedback
     renderMatrix();
     if (state.currentTab === 'fill-hiragana') renderPalette();
     updateStats();
-    lucide.createIcons();
+    if (window.lucide) lucide.createIcons();
   }
 
-  // --- START APPLICATION ---
+  // --- BOOTSTRAP ---
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
